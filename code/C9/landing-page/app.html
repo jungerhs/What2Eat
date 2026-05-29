@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C9 尝咸淡 - AI 食谱问答</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+        mono: ['SF Mono', 'JetBrains Mono', 'Consolas', 'monospace'],
+      },
+      colors: {
+        brand: {
+          50: '#FFF5F0', 100: '#FFE8DD', 200: '#FFCFB8', 300: '#FFB08A',
+          400: '#FC8F5C', 500: '#E85D3A', 600: '#D14525', 700: '#B33518',
+          800: '#8F2713', 900: '#6B1F12',
+        },
+        gold: { 400: '#F4C56A', 500: '#E8A838', 600: '#D4911E' },
+        warm: {
+          50: '#FFFDF9', 100: '#FFF9ED', 200: '#FFF3D6',
+          800: '#3D2E1A', 900: '#2B1F0F',
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+  /* ── Base ── */
+  html, body {
+    height: 100vh;
+    overflow: hidden;
+    scroll-behavior: smooth;
+    touch-action: manipulation;
+  }
+  body {
+    font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  /* ── Background ── */
+  .bg-mesh {
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(232,93,58,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 20%, rgba(232,168,56,0.12) 0%, transparent 55%),
+      linear-gradient(180deg, #FFFDF9 0%, #FFF9ED 40%, #FFF3D6 100%);
+  }
+
+  /* ── Glass Cards ── */
+  .glass {
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 0 4px 24px rgba(180,100,60,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .glass-strong {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: 0 8px 40px rgba(180,100,60,0.10), 0 2px 6px rgba(0,0,0,0.05);
+  }
+
+  /* ── Focus ── */
+  *:focus-visible {
+    outline: 2px solid #E85D3A; outline-offset: 2px; border-radius: 4px;
+  }
+
+  /* ── Chat scrollbar ── */
+  #message-list::-webkit-scrollbar { width: 5px; }
+  #message-list::-webkit-scrollbar-track { background: transparent; }
+  #message-list::-webkit-scrollbar-thumb { background: rgba(180,100,60,0.2); border-radius: 10px; }
+
+  /* ── Typing dots ── */
+  @keyframes dot-bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+  .typing-dot { animation: dot-bounce 1.4s infinite ease-in-out both; }
+  .typing-dot:nth-child(2) { animation-delay: 0.16s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.32s; }
+
+  /* ── Streaming blink cursor ── */
+  @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+  .streaming-cursor::after { content: '▊'; animation: blink 0.8s infinite; color: #E85D3A; }
+
+  /* ── Toast animation ── */
+  @keyframes slide-in { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .toast-enter { animation: slide-in 0.3s ease-out; }
+
+  /* ── Message markdown ── */
+  .msg-content p { margin-bottom: 0.5rem; }
+  .msg-content p:last-child { margin-bottom: 0; }
+  .msg-content strong { color: #2B1F0F; font-weight: 600; }
+  .msg-content ul, .msg-content ol { margin: 0.25rem 0; padding-left: 1.25rem; }
+  .msg-content li { margin-bottom: 0.15rem; }
+  .msg-content code {
+    background: rgba(232,93,58,0.08); padding: 1px 5px; border-radius: 4px;
+    font-family: 'SF Mono', 'JetBrains Mono', monospace; font-size: 0.875em;
+  }
+
+  /* ─ Responsive sidebar toggle ── */
+  @media (max-width: 1023px) {
+    #stats-sidebar { display: none; }
+    #stats-sidebar.open { display: block; }
+  }
+
+  /* ── Chat message styles ── */
+  .user-message {
+    background: linear-gradient(135deg, #E85D3A 0%, #D14525 100%);
+    color: white;
+    border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    box-shadow: 0 4px 12px rgba(232,93,58,0.25);
+    max-width: 85%;
+  }
+  @media (min-width: 640px) {
+    .user-message { max-width: 75%; }
+  }
+  
+  .ai-message {
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 16px rgba(180,100,60,0.08);
+    max-width: 85%;
+  }
+  @media (min-width: 640px) {
+    .ai-message { max-width: 80%; }
+  }
+
+  /* ── Chat scroll area ── */
+  #message-list {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(180,100,60,0.2) transparent;
+  }
+  #message-list::-webkit-scrollbar { width: 6px; }
+  #message-list::-webkit-scrollbar-track { background: transparent; }
+  #message-list::-webkit-scrollbar-thumb { background: rgba(180,100,60,0.2); border-radius: 10px; }
+  #message-list::-webkit-scrollbar-thumb:hover { background: rgba(180,100,60,0.35); }
+</style>
+</head>
+<body class="min-h-screen text-warm-900 bg-mesh relative">
+
+<!-- ====== NAV ====== -->
+<nav class="fixed top-3 left-3 right-3 z-50" aria-label="主导航">
+  <div class="max-w-7xl mx-auto glass-strong rounded-2xl px-4 sm:px-6 py-3 flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-2.5 no-underline shrink-0" aria-label="C9 首页">
+      <span class="text-xl sm:text-2xl">🥢</span>
+      <span class="font-semibold text-base sm:text-lg text-warm-900">C9 <span class="text-brand-500 font-light">尝咸淡</span></span>
+    </a>
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Stats toggle (mobile) -->
+      <button id="stats-toggle-btn" onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg hover:bg-white/50 transition-colors duration-200 cursor-pointer text-warm-800/60" aria-label="统计面板" title="统计面板" touch-action="manipulation">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      </button>
+      <!-- Connection status dot -->
+      <span id="conn-dot" class="w-2 h-2 rounded-full bg-yellow-400" title="连接状态"></span>
+      <a href="index.html" class="hidden sm:flex items-center gap-1 text-sm text-warm-800/60 hover:text-brand-500 transition-colors duration-200 cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        返回首页
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ====== MAIN LAYOUT ====== -->
+<main class="flex flex-col lg:flex-row gap-4 lg:gap-6 pt-24 pb-4 px-4 sm:px-6 max-w-7xl mx-auto" style="height: calc(100vh - 16px);">
+  <div class="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full">
+    <!-- Chat container -->
+    <section class="flex-1 flex flex-col min-w-0">
+      <!-- Chat background panel -->
+      <div class="rounded-2xl flex flex-col overflow-hidden bg-white/40" style="height: calc(100vh - 112px); min-height: 500px;">
+      
+      <!-- Chat header -->
+      <div class="px-4 sm:px-6 py-3 border-b border-warm-800/8 flex items-center gap-3 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400/20 to-gold-400/20 flex items-center justify-center text-lg">🥢</div>
+        <div>
+          <div class="text-sm font-semibold text-warm-900">C9 尝咸淡</div>
+          <div class="text-xs text-warm-800/50 flex items-center gap-1">
+            <span id="chat-status-dot" class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+            <span id="chat-status-text">连接中...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Message List -->
+      <div id="message-list" class="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4 space-y-4 overscroll-contain" style="min-height: 0;">
+        <!-- Welcome card -->
+        <div id="welcome-card" class="flex flex-col items-center justify-center h-full text-center py-8">
+          <div class="text-5xl sm:text-6xl mb-4">🥢</div>
+          <h2 class="text-lg sm:text-xl font-semibold mb-2 text-warm-900">欢迎使用 C9 尝咸淡</h2>
+          <p class="text-sm sm:text-base text-warm-800/60 mb-6 max-w-md">我是你的 AI 烹饪助手，基于知识图谱为你提供专业的中餐指导</p>
+          <div class="flex flex-wrap justify-center gap-2">
+            <button class="glass rounded-full px-4 py-2 cursor-pointer hover:bg-white/80 transition-all duration-200 text-xs sm:text-sm text-warm-800/70 font-medium hover:text-brand-600 hover:shadow-md" onclick="sendPreset('鱼香肉丝怎么做？')">鱼香肉丝怎么做？</button>
+            <button class="glass rounded-full px-4 py-2 cursor-pointer hover:bg-white/80 transition-all duration-200 text-xs sm:text-sm text-warm-800/70 font-medium hover:text-brand-600 hover:shadow-md" onclick="sendPreset('家里有土豆和牛肉能做什么菜？')">土豆+牛肉能做什么？</button>
+            <button class="glass rounded-full px-4 py-2 cursor-pointer hover:bg-white/80 transition-all duration-200 text-xs sm:text-sm text-warm-800/70 font-medium hover:text-brand-600 hover:shadow-md" onclick="sendPreset('推荐几道简单的川菜')">推荐几道川菜</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="px-4 sm:px-6 py-3 border-t border-warm-800/8 bg-white/30 shrink-0">
+        <div class="flex items-end gap-2">
+          <textarea id="chat-input"
+            rows="1"
+            placeholder="输入你的烹饪问题…"
+            aria-label="烹饪问题输入"
+            class="flex-1 resize-none bg-white/60 rounded-xl border border-warm-800/10 outline-none text-sm sm:text-base text-warm-900 placeholder-warm-800/40 py-2.5 px-3 max-h-32 focus:border-brand-400/50 focus:bg-white/80 transition-colors"
+            oninput="autoResize(this)"
+            onkeydown="handleKeyDown(event)"
+          ></textarea>
+          <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <!-- Stream toggle -->
+            <label class="flex items-center gap-1.5 cursor-pointer text-xs text-warm-800/50 select-none hover:text-warm-800/70 transition-colors" title="流式响应">
+              <input type="checkbox" id="stream-toggle" checked class="sr-only peer">
+              <span class="w-8 h-4.5 rounded-full bg-warm-800/10 peer-checked:bg-brand-400/50 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:w-3.5 after:h-3.5 after:transition-transform peer-checked:after:translate-x-3.5 after:shadow-sm"></span>
+              流式
+            </label>
+            <!-- Send button -->
+            <button id="send-btn" onclick="sendMessage()"
+              class="px-4 sm:px-5 py-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-600 active:scale-95 transition-all duration-200 cursor-pointer shadow-md shadow-brand-500/25 hover:shadow-lg hover:shadow-brand-500/30 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="发送"
+              touch-action="manipulation">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              <span class="hidden sm:inline text-sm font-medium">发送</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== RIGHT: STATS SIDEBAR ===== -->
+    <aside id="stats-sidebar" class="w-full lg:w-80 shrink-0 flex flex-col gap-3 lg:gap-4">
+      <!-- System status -->
+      <div class="rounded-2xl p-4 bg-white/40">
+        <h3 class="text-sm font-semibold text-warm-800/80 mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+          系统状态
+        </h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-warm-800/60">状态</span>
+            <span id="stat-status" class="font-medium text-yellow-500">检测中…</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-warm-800/60">版本</span>
+            <span class="text-warm-800/80">1.0.0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-warm-800/60">总查询</span>
+            <span id="stat-queries" class="text-warm-800/80">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Knowledge base stats -->
+      <div class="rounded-2xl p-4 bg-white/40">
+        <h3 class="text-sm font-semibold text-warm-800/80 mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7h16M4 7l2-3h12l2 3"/></svg>
+          知识库
+        </h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-warm-800/60">菜谱</span><span id="stat-recipes" class="text-warm-800/80">--</span></div>
+          <div class="flex justify-between"><span class="text-warm-800/60">食材</span><span id="stat-ingredients" class="text-warm-800/80">--</span></div>
+          <div class="flex justify-between"><span class="text-warm-800/60">烹饪步骤</span><span id="stat-steps" class="text-warm-800/80">--</span></div>
+          <div class="flex justify-between"><span class="text-warm-800/60">文档块</span><span id="stat-chunks" class="text-warm-800/80">--</span></div>
+          <div class="flex justify-between"><span class="text-warm-800/60">向量</span><span id="stat-vectors" class="text-warm-800/80">--</span></div>
+        </div>
+      </div>
+
+      <!-- Routing distribution -->
+      <div class="rounded-2xl p-4 bg-white/40">
+        <h3 class="text-sm font-semibold text-warm-800/80 mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+          检索策略分布
+        </h3>
+        <div class="space-y-2 text-xs sm:text-sm">
+          <div>
+            <div class="flex justify-between mb-0.5"><span class="text-warm-800/60">传统混合</span><span id="stat-trad" class="text-brand-500 font-medium">--</span></div>
+            <div class="h-1.5 rounded-full bg-warm-800/10 overflow-hidden"><div id="bar-trad" class="h-full rounded-full bg-brand-400" style="width:0%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-0.5"><span class="text-warm-800/60">图 RAG</span><span id="stat-graph" class="text-purple-500 font-medium">--</span></div>
+            <div class="h-1.5 rounded-full bg-warm-800/10 overflow-hidden"><div id="bar-graph" class="h-full rounded-full bg-purple-400" style="width:0%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-0.5"><span class="text-warm-800/60">组合策略</span><span id="stat-combined" class="text-teal-500 font-medium">--</span></div>
+            <div class="h-1.5 rounded-full bg-warm-800/10 overflow-hidden"><div id="bar-combined" class="h-full rounded-full bg-teal-400" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload recipe -->
+      <div class="rounded-2xl p-4 bg-white/40 flex-1">
+        <h3 class="text-sm font-semibold text-warm-800/80 mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          上传食谱
+        </h3>
+        <label id="upload-label" for="file-upload"
+          class="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-warm-800/15 rounded-xl cursor-pointer hover:border-brand-400/50 hover:bg-brand-50/30 transition-colors duration-200 text-center">
+          <svg class="w-6 h-6 text-warm-800/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+          <span id="upload-hint" class="text-xs text-warm-800/50">点击选择 .md / .pdf / .txt</span>
+          <input id="file-upload" type="file" accept=".md,.markdown,.pdf,.txt" class="hidden" onchange="handleFileSelect(event)">
+        </label>
+        <div id="upload-status" class="hidden mt-2 text-xs text-center"></div>
+      </div>
+
+      <!-- Rebuild (aligned with input area) -->
+      <button id="rebuild-btn" onclick="handleRebuild()"
+        class="w-full py-2.5 rounded-xl text-sm font-medium text-warm-800/60 hover:text-brand-600 hover:bg-white/60 transition-colors duration-200 cursor-pointer shrink-0 bg-white/40" touch-action="manipulation">
+        重建知识库
+      </button>
+    </aside>
+  </div>
+</main>
+
+<!-- ====== TOAST CONTAINER ====== -->
+<div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 pointer-events-none"></div>
+
+<!-- ====== SCRIPTS ====== -->
+<script>
+// ═══════════════ State ═══════════════
+const API = 'http://localhost:8000';
+const state = {
+  messages: [],
+  isStreaming: false,
+  connectionStatus: 'connecting',
+  rebuildConfirm: false,
+};
+
+// ═══════════════ Utilities ═══════════════
+function $(id) { return document.getElementById(id); }
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+function now() { return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ═══════════════ Toast ═══════════════
+function showToast(msg, type = 'info') {
+  const colors = { info: 'bg-warm-800/80 text-white', error: 'bg-red-500 text-white', success: 'bg-emerald-500 text-white' };
+  const el = document.createElement('div');
+  el.className = `toast-enter pointer-events-auto px-4 py-2 rounded-xl text-sm font-medium ${colors[type] || colors.info}`;
+  el.textContent = msg;
+  $('toast-container').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; }, 4000);
+  setTimeout(() => el.remove(), 4400);
+}
+
+// ═══════════════ Auto-resize textarea ═══════════════
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+}
+
+// ═══════════════ Sidebar toggle (mobile) ═══════════════
+function toggleSidebar() {
+  $('stats-sidebar').classList.toggle('open');
+}
+
+// ═══════════════ Connection check ═══════════════
+async function checkHealth() {
+  try {
+    const res = await fetch(`${API}/api/health`);
+    if (res.ok) {
+      const data = await res.json();
+      state.connectionStatus = data.status; // 'ok' | 'initializing' | 'error'
+    } else {
+      state.connectionStatus = 'error';
+    }
+  } catch {
+    state.connectionStatus = 'error';
+  }
+  updateConnectionDot();
+  if (state.connectionStatus === 'ok') fetchStats();
+}
+
+function updateConnectionDot() {
+  const dot = $('conn-dot');
+  const status = $('stat-status');
+  const chatDot = $('chat-status-dot');
+  const chatText = $('chat-status-text');
+  const colors = { ok: 'bg-emerald-400', initializing: 'bg-yellow-400', error: 'bg-red-400', connecting: 'bg-yellow-400' };
+  const labels = { ok: '运行中', initializing: '初始化中', error: '异常', connecting: '检测中' };
+  const textColors = { ok: 'text-emerald-500', initializing: 'text-yellow-500', error: 'text-red-500', connecting: 'text-yellow-500' };
+  
+  // Update nav dot
+  dot.className = `w-2 h-2 rounded-full ${colors[state.connectionStatus] || 'bg-gray-400'}`;
+  // Update sidebar status
+  status.textContent = labels[state.connectionStatus] || '未知';
+  status.className = 'font-medium ' + (textColors[state.connectionStatus] || 'text-gray-500');
+  
+  // Update chat header status
+  if (chatDot && chatText) {
+    chatDot.className = `w-1.5 h-1.5 rounded-full ${colors[state.connectionStatus] || 'bg-gray-400'}`;
+    chatText.textContent = labels[state.connectionStatus] || '未知';
+  }
+}
+
+// ═══════════════ Stats ═══════════════
+async function fetchStats() {
+  try {
+    const res = await fetch(`${API}/api/stats`);
+    if (!res.ok) return;
+    const data = await res.json();
+    $('stat-queries').textContent = data.routing.total_queries;
+    $('stat-recipes').textContent = data.knowledge_base.total_recipes;
+    $('stat-ingredients').textContent = data.knowledge_base.total_ingredients;
+    $('stat-steps').textContent = data.knowledge_base.total_cooking_steps;
+    $('stat-chunks').textContent = data.knowledge_base.total_chunks;
+    $('stat-vectors').textContent = data.knowledge_base.vector_count;
+
+    // Routing bars
+    const total = data.routing.total_queries;
+    if (total > 0) {
+      const tPct = Math.round(data.routing.traditional_count / total * 100);
+      const gPct = Math.round(data.routing.graph_rag_count / total * 100);
+      const cPct = Math.round(data.routing.combined_count / total * 100);
+      $('stat-trad').textContent = `${tPct}%`;
+      $('stat-graph').textContent = `${gPct}%`;
+      $('stat-combined').textContent = `${cPct}%`;
+      $('bar-trad').style.width = `${tPct}%`;
+      $('bar-graph').style.width = `${gPct}%`;
+      $('bar-combined').style.width = `${cPct}%`;
+    }
+  } catch {
+    // 静默失败
+  }
+}
+
+// ═══════════════ Messages ═══════════════
+function renderMarkdown(text) {
+  // Simple markdown: **bold**, newlines, numbered lists
+  let html = escapeHtml(text);
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Split into paragraphs on double newline
+  const paras = html.split(/\n\n+/);
+  html = paras.map(p => {
+    const lines = p.split('\n');
+    // Check if this is a numbered list
+    if (lines.every((l, i) => /^\d+[\.\、\)]\s/.test(l.trimStart()))) {
+      const items = lines.map(l => `<li>${l.replace(/^\d+[\.\、\)]\s*/, '')}</li>`).join('');
+      return `<ol>${items}</ol>`;
+    }
+    // Check for bullet list
+    if (lines.every(l => /^[-•]\s/.test(l.trimStart()))) {
+      const items = lines.map(l => `<li>${l.replace(/^[-•]\s*/, '')}</li>`).join('');
+      return `<ul>${items}</ul>`;
+    }
+    return `<p>${lines.join('<br>')}</p>`;
+  }).join('');
+  return html;
+}
+
+const STRATEGY_LABELS = {
+  hybrid_traditional: { label: '混合检索', color: 'bg-brand-50 text-brand-600' },
+  graph_rag: { label: '图RAG', color: 'bg-purple-50 text-purple-600' },
+  combined: { label: '组合策略', color: 'bg-teal-50 text-teal-600' },
+};
+
+function addUserMessage(text) {
+  const id = 'msg-' + Date.now();
+  state.messages.push({ id, role: 'user', content: text, time: now() });
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'flex justify-end';
+  div.innerHTML = `
+    <div>
+      <div class="user-message">
+        ${escapeHtml(text)}
+      </div>
+      <div class="text-xs text-warm-800/40 mt-1 text-right">${now()}</div>
+    </div>`;
+  $('message-list').appendChild(div);
+  scrollToBottom();
+}
+
+function addAiMessage(id, html) {
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'flex justify-start';
+  div.innerHTML = html;
+  $('message-list').appendChild(div);
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const list = $('message-list');
+  requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+}
+
+// ═══════════════ Typing indicator ═══════════════
+function showTyping() {
+  const id = 'typing-' + Date.now();
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'flex justify-start';
+  div.innerHTML = `
+    <div>
+      <div class="ai-message">
+        <div class="flex items-center gap-1.5">
+          <span class="typing-dot w-2 h-2 rounded-full bg-brand-400 inline-block"></span>
+          <span class="typing-dot w-2 h-2 rounded-full bg-brand-400 inline-block"></span>
+          <span class="typing-dot w-2 h-2 rounded-full bg-brand-400 inline-block"></span>
+        </div>
+      </div>
+    </div>`;
+  $('message-list').appendChild(div);
+  scrollToBottom();
+  return id;
+}
+
+function removeElement(id) {
+  const el = $(id);
+  if (el) el.remove();
+}
+
+// ═══════════════ Send message ═══════════════
+async function sendMessage(question) {
+  if (state.isStreaming) return;
+
+  const input = $('chat-input');
+  const q = question || input.value.trim();
+  if (!q) return;
+
+  if (!question) input.value = '';
+  input.style.height = 'auto';
+
+  // Hide welcome card when first message is sent
+  const welcomeCard = $('welcome-card');
+  if (welcomeCard) welcomeCard.style.display = 'none';
+
+  addUserMessage(q);
+  state.isStreaming = true;
+  $('send-btn').disabled = true;
+
+  const stream = $('stream-toggle').checked;
+  if (stream) {
+    await sendStreaming(q);
+  } else {
+    await sendNonStreaming(q);
+  }
+
+  state.isStreaming = false;
+  $('send-btn').disabled = false;
+  input.focus();
+  fetchStats();
+}
+
+async function sendNonStreaming(question) {
+  const typingId = showTyping();
+  try {
+    const res = await fetch(`${API}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, stream: false }),
+    });
+    removeElement(typingId);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const detail = err.detail || {};
+      showToast(detail.message || '请求失败，请稍后重试', 'error');
+      return;
+    }
+
+    const data = await res.json();
+    const strategy = data.analysis?.recommended_strategy || 'hybrid_traditional';
+    const s = STRATEGY_LABELS[strategy] || STRATEGY_LABELS.hybrid_traditional;
+
+    addAiMessage('msg-' + Date.now(), `
+      <div>
+        <div class="ai-message">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${s.color}">${s.label}</span>
+            <span class="text-xs text-warm-800/40">${data.response_time_ms?.toFixed(0) || '--'}ms</span>
+          </div>
+          <div class="msg-content text-sm sm:text-base text-warm-800 leading-relaxed">${renderMarkdown(data.answer)}</div>
+        </div>
+        <div class="text-xs text-warm-800/40 mt-1">${now()}</div>
+      </div>`);
+  } catch (e) {
+    removeElement(typingId);
+    showToast('网络错误，请检查服务是否运行', 'error');
+  }
+}
+
+async function sendStreaming(question) {
+  const msgId = 'msg-' + Date.now();
+  addAiMessage(msgId, `
+    <div>
+      <div class="ai-message">
+        <div class="flex items-center gap-2 mb-2" id="${msgId}-header">
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-warm-100 text-warm-600">检索中…</span>
+        </div>
+        <div class="msg-content text-sm sm:text-base text-warm-800 leading-relaxed streaming-cursor" id="${msgId}-body"></div>
+      </div>
+      <div class="text-xs text-warm-800/40 mt-1">${now()}</div>
+    </div>`);
+
+  const bodyEl = $(`${msgId}-body`);
+  const headerEl = $(`${msgId}-header`);
+  let answerText = '';
+
+  try {
+    const res = await fetch(`${API}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, stream: true }),
+    });
+
+    if (!res.ok) {
+      bodyEl.textContent = '请求失败，请稍后重试';
+      bodyEl.classList.remove('streaming-cursor');
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const event = JSON.parse(line.slice(6));
+          switch (event.type) {
+            case 'analysis': {
+              const s = STRATEGY_LABELS[event.data.recommended_strategy] || STRATEGY_LABELS.hybrid_traditional;
+              headerEl.innerHTML = `
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium ${s.color}">${s.label}</span>
+                <span class="text-xs text-warm-800/40">复杂度 ${event.data.query_complexity?.toFixed(2)}</span>`;
+              break;
+            }
+            case 'chunk':
+              answerText += event.content;
+              bodyEl.innerHTML = renderMarkdown(answerText);
+              scrollToBottom();
+              break;
+            case 'done': {
+              bodyEl.classList.remove('streaming-cursor');
+              headerEl.innerHTML = (headerEl.innerHTML || '') + ` <span class="text-xs text-warm-800/40">${event.response_time_ms?.toFixed(0) || '--'}ms</span>`;
+              break;
+            }
+            case 'error':
+              bodyEl.innerHTML = renderMarkdown(answerText) + `<p class="text-red-500 mt-2">⚠ ${escapeHtml(event.message)}</p>`;
+              bodyEl.classList.remove('streaming-cursor');
+              break;
+          }
+        } catch {
+          // 跳过无法解析的行
+        }
+      }
+    }
+    // 确保光标移除
+    bodyEl.classList.remove('streaming-cursor');
+  } catch (e) {
+    if (answerText) {
+      bodyEl.innerHTML = renderMarkdown(answerText) + '<p class="text-red-400 mt-2">[回答中断]</p>';
+    } else {
+      bodyEl.textContent = '网络连接中断，请重试';
+    }
+    bodyEl.classList.remove('streaming-cursor');
+  }
+}
+
+// ═══════════════ Preset questions ═══════════════
+function sendPreset(q) { $('chat-input').value = q; sendMessage(); }
+
+// ═══════════════ Keyboard ═══════════════
+function handleKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+// ═══════════════ File Upload ═══════════════
+async function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const status = $('upload-status');
+  const hint = $('upload-hint');
+  status.classList.remove('hidden');
+  status.textContent = '上传中…';
+  status.className = 'mt-2 text-xs text-center text-warm-800/60';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch(`${API}/api/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'ok') {
+      status.textContent = `"${file.name}" 上传成功`;
+      status.className = 'mt-2 text-xs text-center text-emerald-500 font-medium';
+      hint.textContent = '点击选择 .md / .pdf / .txt';
+      showToast('食谱上传成功', 'success');
+    } else {
+      const msg = data.detail?.message || data.message || '上传失败';
+      status.textContent = msg;
+      status.className = 'mt-2 text-xs text-center text-red-500';
+      showToast(msg, 'error');
+    }
+  } catch {
+    status.textContent = '网络错误，上传失败';
+    status.className = 'mt-2 text-xs text-center text-red-500';
+  }
+
+  // Reset file input
+  event.target.value = '';
+}
+
+// ═══════════════ Rebuild ═══════════════
+async function handleRebuild() {
+  const btn = $('rebuild-btn');
+  if (!state.rebuildConfirm) {
+    state.rebuildConfirm = true;
+    btn.textContent = '确认重建？再次点击执行';
+    btn.classList.add('text-red-500');
+    setTimeout(() => {
+      if (state.rebuildConfirm) {
+        state.rebuildConfirm = false;
+        btn.textContent = '重建知识库';
+        btn.classList.remove('text-red-500');
+      }
+    }, 5000);
+    return;
+  }
+
+  state.rebuildConfirm = false;
+  btn.textContent = '重建中…';
+  btn.classList.remove('text-red-500');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/rebuild`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      showToast('知识库重建成功', 'success');
+    } else {
+      showToast(data.detail?.message || '重建失败', 'error');
+    }
+  } catch {
+    showToast('网络错误', 'error');
+  }
+
+  btn.textContent = '重建知识库';
+  btn.disabled = false;
+  fetchStats();
+}
+
+// ═══════════════ Init ═══════════════
+checkHealth();
+setInterval(checkHealth, 30000);   // 每 30 秒健康检查
+setInterval(fetchStats, 15000);     // 每 15 秒刷新统计
+</script>
+
+</body>
+</html>

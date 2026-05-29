@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C9 尝尝咸淡 - AI 食谱问答助手</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+      },
+      colors: {
+        brand: {
+          50: '#FFF5F0',
+          100: '#FFE8DD',
+          200: '#FFCFB8',
+          300: '#FFB08A',
+          400: '#FC8F5C',
+          500: '#E85D3A',
+          600: '#D14525',
+          700: '#B33518',
+          800: '#8F2713',
+          900: '#6B1F12',
+        },
+        gold: {
+          400: '#F4C56A',
+          500: '#E8A838',
+          600: '#D4911E',
+        },
+        warm: {
+          50: '#FFFDF9',
+          100: '#FFF9ED',
+          200: '#FFF3D6',
+          800: '#3D2E1A',
+          900: '#2B1F0F',
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+  /* ── Base & Scroll ── */
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  /* ── Animated Background ── */
+  .bg-mesh {
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(232,93,58,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 20%, rgba(232,168,56,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 50% 80%, rgba(212,145,30,0.10) 0%, transparent 55%),
+      linear-gradient(180deg, #FFFDF9 0%, #FFF9ED 40%, #FFF3D6 100%);
+  }
+  .bg-mesh::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(circle at 25% 15%, rgba(252,143,92,0.12) 0%, transparent 50%),
+      radial-gradient(circle at 75% 65%, rgba(232,168,56,0.10) 0%, transparent 45%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Glass Card ── */
+  .glass {
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 0 4px 24px rgba(180,100,60,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .glass-strong {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: 0 8px 40px rgba(180,100,60,0.10), 0 2px 6px rgba(0,0,0,0.05);
+  }
+  .glass-dark {
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+
+  /* ── Floating Decorative Orbs ── */
+  .orb {
+    position: absolute; border-radius: 50%; pointer-events: none; z-index: 0;
+  }
+  .orb-1 { width: 360px; height: 360px; background: radial-gradient(circle, rgba(232,93,58,0.13), transparent 70%); top: -120px; left: -100px; }
+  .orb-2 { width: 280px; height: 280px; background: radial-gradient(circle, rgba(232,168,56,0.12), transparent 70%); bottom: -80px; right: -80px; }
+  .orb-3 { width: 220px; height: 220px; background: radial-gradient(circle, rgba(252,143,92,0.10), transparent 70%); top: 60%; left: 60%; }
+
+  /* ── Feature Icon Container ── */
+  .icon-wrap {
+    display: flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; border-radius: 16px;
+    background: linear-gradient(135deg, #E85D3A 0%, #E8A838 100%);
+    box-shadow: 0 6px 20px rgba(232,93,58,0.22);
+  }
+  .icon-wrap svg { width: 28px; height: 28px; color: #fff; }
+
+  /* ── Step Number ── */
+  .step-num {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #E85D3A, #D4911E);
+    color: #fff; font-weight: 700; font-size: 1.25rem;
+    box-shadow: 0 6px 20px rgba(232,93,58,0.25);
+    flex-shrink: 0;
+  }
+
+  /* ── Divider ── */
+  .section-divider {
+    width: 60px; height: 4px; border-radius: 2px;
+    background: linear-gradient(90deg, #E85D3A, #E8A838);
+    margin: 0 auto;
+  }
+
+  /* ── Focus ring ── */
+  *:focus-visible {
+    outline: 2px solid #E85D3A; outline-offset: 2px; border-radius: 4px;
+  }
+</style>
+</head>
+<body class="min-h-screen text-warm-900 bg-mesh relative">
+
+<!-- ====== NAVIGATION ====== -->
+<nav class="fixed top-4 left-4 right-4 z-50" aria-label="主导航">
+  <div class="max-w-6xl mx-auto glass-strong rounded-2xl px-6 py-3.5 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5 no-underline" aria-label="C9 首页">
+      <span class="text-2xl">🥢</span>
+      <span class="font-semibold text-lg text-warm-900">C9 <span class="text-brand-500 font-light">尝尝咸淡</span></span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-sm font-medium text-warm-800">
+      <a href="#features" class="hover:text-brand-500 transition-colors duration-200 cursor-pointer">功能特性</a>
+      <a href="#how-it-works" class="hover:text-brand-500 transition-colors duration-200 cursor-pointer">工作原理</a>
+      <a href="app.html" class="px-5 py-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors duration-200 cursor-pointer shadow-md shadow-brand-500/25">
+        开始使用
+      </a>
+    </div>
+    <!-- Mobile menu button -->
+    <button class="md:hidden p-2 rounded-lg hover:bg-white/50 transition-colors duration-200 cursor-pointer" aria-label="菜单" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </div>
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="hidden md:hidden mt-3 glass-strong rounded-2xl px-6 py-4 flex flex-col gap-3 text-sm font-medium text-warm-800">
+    <a href="#features" class="py-2 hover:text-brand-500 transition-colors duration-200 cursor-pointer">功能特性</a>
+    <a href="#how-it-works" class="py-2 hover:text-brand-500 transition-colors duration-200 cursor-pointer">工作原理</a>
+    <a href="app.html" class="py-2.5 px-5 bg-brand-500 text-white rounded-xl text-center hover:bg-brand-600 transition-colors duration-200 cursor-pointer">开始使用</a>
+  </div>
+</nav>
+
+<!-- ====== HERO SECTION ====== -->
+<section class="relative pt-36 pb-20 md:pt-48 md:pb-32 overflow-hidden" aria-labelledby="hero-heading">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto text-center">
+      <!-- Badge -->
+      <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm text-brand-600 font-medium mb-8">
+        <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+        基于知识图谱的智能烹饪助手
+      </div>
+
+      <h1 id="hero-heading" class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-6">
+        懂食材，更懂
+        <span class="bg-gradient-to-r from-brand-500 via-brand-400 to-gold-500 bg-clip-text text-transparent">你的口味</span>
+      </h1>
+
+      <p class="text-lg md:text-xl text-warm-800/80 leading-relaxed mb-10 max-w-2xl mx-auto">
+        C9 尝咸淡是一款基于知识图谱和 AI 的智能食谱问答助手。<br class="hidden sm:block">
+        搭载 RAG 检索增强引擎，为你提供精准、专业的中餐烹饪指导。
+      </p>
+
+      <!-- CTA Buttons -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+        <a href="app.html" class="w-full sm:w-auto px-8 py-4 bg-brand-500 text-white font-semibold rounded-2xl hover:bg-brand-600 active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-lg shadow-brand-500/30 text-lg">
+          立即体验
+        </a>
+        <a href="#features" class="w-full sm:w-auto px-8 py-4 glass-strong text-warm-800 font-semibold rounded-2xl hover:bg-white/80 transition-all duration-200 cursor-pointer text-lg">
+          了解更多
+        </a>
+      </div>
+
+      <!-- Stats -->
+      <div class="glass rounded-2xl p-6 sm:p-8 grid grid-cols-3 gap-4 sm:gap-8">
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-brand-500 mb-1">10万+</div>
+          <div class="text-sm text-warm-800/70 font-medium">菜谱数据</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-brand-500 mb-1">3 种</div>
+          <div class="text-sm text-warm-800/70 font-medium">智能检索策略</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-brand-500 mb-1">毫秒级</div>
+          <div class="text-sm text-warm-800/70 font-medium">响应速度</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== FEATURES SECTION ====== -->
+<section id="features" class="relative py-20 md:py-28" aria-labelledby="features-heading">
+  <div class="orb orb-3"></div>
+
+  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-14">
+      <h2 id="features-heading" class="text-3xl sm:text-4xl font-bold mb-4">智能烹饪，从「问」开始</h2>
+      <div class="section-divider mb-6"></div>
+      <p class="text-lg text-warm-800/75 max-w-2xl mx-auto">
+        C9 将 AI 大模型与知识图谱深度融合，让每道菜的疑问都能得到精准回答
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 lg:gap-8">
+      <!-- Feature 1 -->
+      <div class="glass rounded-2xl p-6 sm:p-8 hover:bg-white/70 transition-all duration-300 cursor-pointer group">
+        <div class="icon-wrap mb-5">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </div>
+        <h3 class="text-xl font-semibold mb-3">知识图谱引擎</h3>
+        <p class="text-warm-800/70 leading-relaxed">
+          基于 Neo4j 构建菜谱知识图谱，深度关联食材、步骤、口味，让 AI 真正理解烹饪逻辑而非简单匹配关键词。
+        </p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="glass rounded-2xl p-6 sm:p-8 hover:bg-white/70 transition-all duration-300 cursor-pointer group">
+        <div class="icon-wrap mb-5">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        </div>
+        <h3 class="text-xl font-semibold mb-3">双路混合检索</h3>
+        <p class="text-warm-800/70 leading-relaxed">
+          Milvus 向量搜索 + BM25 关键词检索双引擎融合，毫秒级召回最相关的菜谱知识，回答既精准又全面。
+        </p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="glass rounded-2xl p-6 sm:p-8 hover:bg-white/70 transition-all duration-300 cursor-pointer group">
+        <div class="icon-wrap mb-5">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        </div>
+        <h3 class="text-xl font-semibold mb-3">智能问答对话</h3>
+        <p class="text-warm-800/70 leading-relaxed">
+          基于 Moonshot/Kimi 大模型，结合检索增强生成技术，支持多轮对话，像大厨一样为你答疑解惑。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== HOW IT WORKS SECTION ====== -->
+<section id="how-it-works" class="relative py-20 md:py-28" aria-labelledby="how-heading">
+  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-14">
+      <h2 id="how-heading" class="text-3xl sm:text-4xl font-bold mb-4">三步，轻松掌握烹饪之道</h2>
+      <div class="section-divider mb-6"></div>
+      <p class="text-lg text-warm-800/75 max-w-2xl mx-auto">
+        从菜谱解析到智能问答，C9 用 AI 让烹饪变得更简单
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 lg:gap-8">
+      <!-- Step 1 -->
+      <div class="glass rounded-2xl p-6 sm:p-8 text-center hover:bg-white/70 transition-all duration-300 cursor-pointer">
+        <div class="step-num mx-auto mb-5">1</div>
+        <h3 class="text-lg font-semibold mb-3">导入菜谱数据</h3>
+        <p class="text-warm-800/70 leading-relaxed text-sm">
+          AI 自动解析 Markdown 菜谱，提取食材、步骤、口味等关键信息，构建结构化知识网络。
+        </p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="glass rounded-2xl p-6 sm:p-8 text-center hover:bg-white/70 transition-all duration-300 cursor-pointer">
+        <div class="step-num mx-auto mb-5">2</div>
+        <h3 class="text-lg font-semibold mb-3">输入你的问题</h3>
+        <p class="text-warm-800/70 leading-relaxed text-sm">
+          「鱼香肉丝怎么做？」「家里有土豆和牛肉能做什么菜？」—— 用自然语言直接提问。
+        </p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="glass rounded-2xl p-6 sm:p-8 text-center hover:bg-white/70 transition-all duration-300 cursor-pointer">
+        <div class="step-num mx-auto mb-5">3</div>
+        <h3 class="text-lg font-semibold mb-3">获得精准答案</h3>
+        <p class="text-warm-800/70 leading-relaxed text-sm">
+          智能路由选择最优检索策略，结合大模型为你生成步骤详尽、调味精准的烹饪指导。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== TECH STACK SECTION ====== -->
+<section class="relative py-20 md:py-28" aria-labelledby="tech-heading">
+  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-14">
+      <h2 id="tech-heading" class="text-3xl sm:text-4xl font-bold mb-4">技术架构</h2>
+      <div class="section-divider mb-6"></div>
+      <p class="text-lg text-warm-800/75 max-w-2xl mx-auto">
+        前沿技术栈，构建新一代智能烹饪知识系统
+      </p>
+    </div>
+
+    <div class="glass-strong rounded-2xl p-6 sm:p-10 overflow-x-auto">
+      <div class="flex flex-wrap items-center justify-center gap-4 md:gap-6 min-w-fit">
+        <!-- Neo4j -->
+        <div class="glass rounded-xl px-5 py-3 flex items-center gap-2.5 text-sm font-medium whitespace-nowrap">
+          <svg class="w-5 h-5 text-[#4581C3]" fill="currentColor" viewBox="0 0 24 24"><path d="M9.613.183c-2.353.674-4.42 2.094-5.954 4.095L1.646 2.22l-.107.152c1.64 2.358 3.904 4.198 6.526 5.25l.153.048.15-.06c2.425-.922 4.566-2.55 6.157-4.665l.038-.067-.05-.08c-1.183-1.874-2.974-3.22-4.9-3.75v-.08h.04c.66.22 1.28.53 1.85.93l.09.07.06-.1c-.65-1.08-1.66-2.01-2.95-2.31l-.09-.02V.18l-.05.003zM8.82 8.47c-1.77.47-3.44 1.35-4.85 2.57l-.08.07-.02-.1c-.43-2.12.15-4.48 1.63-6.42l.06-.08.07.06c1.52 1.36 2.72 3.06 3.45 4.94l.05.13-.1.1c-.67.66-.64 1.75.02 2.41.66.66 1.75.64 2.41-.02l.1-.1.13.05c1.88.73 3.58 1.93 4.94 3.45l.06.07-.08.06c-1.94 1.48-4.3 2.06-6.42 1.63l-.1-.02.07-.08c1.22-1.41 2.1-3.08 2.57-4.85l.03-.1.1.03c1.4.44 2.42.6 3.53.6h.12c1.1 0 2.13-.16 3.53-.6l.1-.03.03.1c.47 1.77 1.35 3.44 2.57 4.85l.07.08-.1.02c-2.12.43-4.48-.15-6.42-1.63l-.08-.06.06-.07c1.36-1.52 3.06-2.72 4.94-3.45l.13-.05.1.1c.66.66 1.75.68 2.41.02s.68-1.75.02-2.41l-.1-.1.05-.13c.73-1.88 1.93-3.58 3.45-4.94l.07-.06.06.08c1.48 1.94 2.06 4.3 1.63 6.42l-.02.1-.08-.07c-1.41-1.22-3.08-2.1-4.85-2.57l-.1-.03-.03-.1c-.44-1.4-.6-2.42-.6-3.53 0-1.1.16-2.13.6-3.53l.03-.1.1-.03c1.77-.47 3.44-1.35 4.85-2.57l.08-.07.02.1c.43 2.12-.15 4.48-1.63 6.42l-.06.08-.07-.06c-1.52-1.36-2.72-3.06-3.45-4.94l-.05-.13.1-.1c.67-.66.64-1.75-.02-2.41-.66-.66-1.75-.64-2.41.02l-.1.1-.13-.05c-1.88-.73-3.58-1.93-4.94-3.45l-.06-.07.08-.06c1.94-1.48 4.3-2.06 6.42-1.63l.1.02-.07.08c-1.22 1.41-2.1 3.08-2.57 4.85l-.03.1-.1.03c-1.4-.44-2.42-.6-3.53-.6h-.12c-1.1 0-2.13.16-3.53.6z"/></svg>
+          Neo4j 图数据库
+        </div>
+        <!-- Milvus -->
+        <div class="glass rounded-xl px-5 py-3 flex items-center gap-2.5 text-sm font-medium whitespace-nowrap">
+          <svg class="w-5 h-5 text-[#00A4D3]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          Milvus 向量数据库
+        </div>
+        <!-- Moonshot -->
+        <div class="glass rounded-xl px-5 py-3 flex items-center gap-2.5 text-sm font-medium whitespace-nowrap">
+          <svg class="w-5 h-5 text-[#6366F1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
+          Moonshot/Kimi 大模型
+        </div>
+        <!-- Embedding -->
+        <div class="glass rounded-xl px-5 py-3 flex items-center gap-2.5 text-sm font-medium whitespace-nowrap">
+          <svg class="w-5 h-5 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.7 50.7 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/></svg>
+          BGE 中文嵌入模型
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== CTA SECTION ====== -->
+<section id="cta" class="relative py-20 md:py-28" aria-labelledby="cta-heading">
+  <div class="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <div class="glass-strong rounded-3xl p-8 sm:p-12 md:p-16">
+      <h2 id="cta-heading" class="text-3xl sm:text-4xl font-bold mb-4">开始你的智能烹饪之旅</h2>
+      <div class="section-divider mb-6"></div>
+      <p class="text-lg text-warm-800/75 mb-10 max-w-xl mx-auto leading-relaxed">
+        只需一行命令，即刻启动 AI 烹饪助手。让每一道菜，都有 AI 为你保驾护航。
+      </p>
+
+      <!-- Code Block -->
+      <div class="glass rounded-xl p-4 sm:p-5 mb-8 text-left overflow-x-auto">
+        <code class="text-sm sm:text-base text-warm-800 font-mono whitespace-nowrap">
+          <span class="text-brand-500">cd</span> code/C9 <span class="text-warm-800/30">&&</span> <span class="text-brand-500">python</span> main.py
+        </code>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto px-8 py-4 bg-brand-500 text-white font-semibold rounded-2xl hover:bg-brand-600 active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-lg shadow-brand-500/30">
+          GitHub 获取源码
+        </a>
+        <a href="#features" class="w-full sm:w-auto px-8 py-4 glass text-warm-800 font-semibold rounded-2xl hover:bg-white/60 transition-all duration-200 cursor-pointer">
+          查看文档
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== FOOTER ====== -->
+<footer class="relative pb-10" role="contentinfo">
+  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="glass rounded-2xl px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-warm-800/60">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">🥢</span>
+        <span>C9 尝尝咸淡 — AI 驱动的中餐食谱知识图谱问答系统</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <span>Python 3.12+</span>
+        <span class="hidden sm:inline">·</span>
+        <span>Neo4j 5.18</span>
+        <span class="hidden sm:inline">·</span>
+        <span>Milvus 2.5</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
