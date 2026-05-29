@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment variables (contains API keys)
+.env
+!.env.example
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env*/
+
+# Docker volumes (generated at runtime)
+volumes/
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Agent & Claude generated configs
+.agents/
+.claude/
+skills-lock.json
+
+# OS files
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Logs
+*.log
+
+# Database data directories (Neo4j import data is tracked)
+data/**/data/
+data/**/logs/
+data/**/import/
