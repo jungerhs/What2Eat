@@ -1,0 +1,3952 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "cook",
+    "languages": [
+      "config",
+      "csv",
+      "cypher",
+      "html",
+      "json",
+      "jsonc",
+      "markdown",
+      "python",
+      "txt",
+      "unknown",
+      "yaml"
+    ],
+    "frameworks": [
+      "Docker Compose",
+      "FastAPI",
+      "Pydantic",
+      "Uvicorn"
+    ],
+    "description": "C9（尝尝咸淡）是一个基于知识图谱的中文烹饪 RAG（检索增强生成）系统。它通过将 Markdown 菜谱解析为 Neo4j 知识图谱，结合 Milvus 向量搜索与 Neo4j 图遍历的双引擎检索机制，利用 LLM 回答烹饪相关问题。",
+    "analyzedAt": "2026-05-29T04:08:42.971Z",
+    "gitCommitHash": "a6057623f3b47e4da6c28892aa0f6b7691b92565"
+  },
+  "nodes": [
+    {
+      "id": "file:code/C9/api_server.py",
+      "type": "file",
+      "name": "api_server.py",
+      "filePath": "code/C9/api_server.py",
+      "summary": "基于 FastAPI 的 Web API 服务器，为 C9 烹饪 RAG 系统提供 REST 接口，包括健康检查、聊天问答（支持流式和非流式）、系统统计查询、知识库重建以及菜谱文件上传等端点，并在应用生命周期中管理 RAG 系统的初始化与清理。",
+      "tags": [
+        "api-handler",
+        "entry-point",
+        "web-service",
+        "fastapi",
+        "rest-api"
+      ],
+      "complexity": "complex",
+      "languageNotes": "使用 FastAPI 的 lifespan 异步上下文管理器进行系统生命周期管理；Pydantic BaseModel 定义请求/响应数据模型；支持 Server-Sent Events 流式响应。"
+    },
+    {
+      "id": "file:code/C9/config.py",
+      "type": "file",
+      "name": "config.py",
+      "filePath": "code/C9/config.py",
+      "summary": "定义 GraphRAGConfig 数据类，集中管理 Neo4j 图数据库连接参数、Milvus 向量数据库配置、嵌入模型与 LLM 调用参数、文档分块策略等所有系统配置项。",
+      "tags": [
+        "configuration",
+        "dataclass",
+        "settings"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Python dataclass 实现配置管理，包含 __post_init__ 环境变量注入以及 from_dict/to_dict 序列化方法，支持从字典动态构建配置。"
+    },
+    {
+      "id": "file:code/C9/main.py",
+      "type": "file",
+      "name": "main.py",
+      "filePath": "code/C9/main.py",
+      "summary": "C9 烹饪 RAG 系统的核心编排模块，负责依次初始化数据准备、向量索引构建、混合检索、图 RAG 检索及智能查询路由等全部子系统，并提供交互式命令行界面供用户进行烹饪知识问答。",
+      "tags": [
+        "entry-point",
+        "orchestrator",
+        "rag-system",
+        "cli",
+        "interactive"
+      ],
+      "complexity": "complex",
+      "languageNotes": "采用单例编排器模式（AdvancedGraphRAGSystem）管理全部模块生命周期；通过 LLM 驱动的查询路由自动切换检索策略（traditional / graph_rag / combined）；支持流式答案生成。"
+    },
+    {
+      "id": "file:code/C9/rag_modules/graph_rag_retrieval.py",
+      "type": "file",
+      "name": "graph_rag_retrieval.py",
+      "filePath": "code/C9/rag_modules/graph_rag_retrieval.py",
+      "summary": "实现基于 Neo4j 图数据库的原生 RAG 检索引擎，支持多跳路径遍历、知识子图抽取、图结构推理链构建和自适应查询规划，能够回答需要复杂烹饪关系推理的问题。",
+      "tags": [
+        "graph-retrieval",
+        "neo4j",
+        "multi-hop",
+        "knowledge-graph",
+        "reasoning"
+      ],
+      "complexity": "complex",
+      "languageNotes": "构建实体/关系双向索引加速图查找；LLM 驱动的查询理解将自然语言转为结构化 GraphQuery；Cypher 动态查询支持多跳遍历和最短路径发现；包含推理链验证机制确保图推理结果质量。"
+    },
+    {
+      "id": "file:code/C9/rag_modules/intelligent_query_router.py",
+      "type": "file",
+      "name": "intelligent_query_router.py",
+      "filePath": "code/C9/rag_modules/intelligent_query_router.py",
+      "summary": "智能查询路由器，通过 LLM 语义分析与规则引擎相结合的方式，评估用户查询的复杂度、关系强度和推理需求，自动选择最优检索策略（传统混合检索、图 RAG 检索或组合检索）并返回置信度评分。",
+      "tags": [
+        "query-router",
+        "strategy-pattern",
+        "llm-analysis",
+        "routing"
+      ],
+      "complexity": "complex",
+      "languageNotes": "LLM 分析失败时自动回退到基于关键词的规则分析方法；组合检索采用轮询交错（round-robin）策略融合两种引擎结果并去重；路由统计跟踪各策略使用频率。"
+    },
+    {
+      "id": "function:code/C9/api_server.py:_make_analysis_response",
+      "type": "function",
+      "name": "_make_analysis_response",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        133,
+        145
+      ],
+      "summary": "根据查询分析结果构造 QueryAnalysisResponse 对象，用于向客户端返回路由决策的详细信息。",
+      "tags": [
+        "helper",
+        "response-builder",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/api_server.py:lifespan",
+      "type": "function",
+      "name": "lifespan",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        153,
+        171
+      ],
+      "summary": "FastAPI 应用生命周期管理器，在应用启动时初始化 AdvancedGraphRAGSystem 并构建知识库，在关闭时执行资源清理。",
+      "tags": [
+        "lifecycle",
+        "startup",
+        "shutdown",
+        "async-context-manager"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/api_server.py:_check_system_ready",
+      "type": "function",
+      "name": "_check_system_ready",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        194,
+        205
+      ],
+      "summary": "检查 RAG 系统是否就绪，若未初始化则抛出 HTTP 503 异常，作为 API 端点的前置守卫。",
+      "tags": [
+        "guard",
+        "validation",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/api_server.py:health_check",
+      "type": "function",
+      "name": "health_check",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        213,
+        229
+      ],
+      "summary": "GET /health 端点，返回系统健康状态、版本号及时间戳，支持 healthy/degraded/unhealthy 三种状态。",
+      "tags": [
+        "api-endpoint",
+        "health-check",
+        "monitoring"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/api_server.py:get_stats",
+      "type": "function",
+      "name": "get_stats",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        237,
+        276
+      ],
+      "summary": "GET /stats 端点，汇总知识库统计（菜谱数、食材数、文档数等）、路由统计和向量索引信息并返回。",
+      "tags": [
+        "api-endpoint",
+        "statistics",
+        "monitoring"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/api_server.py:chat",
+      "type": "function",
+      "name": "chat",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        284,
+        326
+      ],
+      "summary": "POST /chat 端点，接收用户烹饪问题，经查询路由分析后调用生成模块产生回答，支持流式和非流式两种响应模式。",
+      "tags": [
+        "api-endpoint",
+        "chat",
+        "streaming",
+        "core"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/api_server.py:_stream_chat",
+      "type": "function",
+      "name": "_stream_chat",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        329,
+        372
+      ],
+      "summary": "流式聊天实现，以 Server-Sent Events 格式逐块返回路由分析结果、检索统计和 LLM 生成的答案文本。",
+      "tags": [
+        "streaming",
+        "sse",
+        "async-generator",
+        "internal"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/api_server.py:rebuild_knowledge_base",
+      "type": "function",
+      "name": "rebuild_knowledge_base",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        380,
+        393
+      ],
+      "summary": "POST /rebuild 端点，删除现有 Milvus 向量集合并重新构建知识库索引。",
+      "tags": [
+        "api-endpoint",
+        "admin",
+        "rebuild"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/api_server.py:upload_recipe",
+      "type": "function",
+      "name": "upload_recipe",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        403,
+        443
+      ],
+      "summary": "POST /upload 端点，接收菜谱 Markdown 文件上传，验证格式后将文件保存到指定目录并返回保存路径。",
+      "tags": [
+        "api-endpoint",
+        "file-upload",
+        "recipe"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:code/C9/api_server.py:RoutingStats",
+      "type": "class",
+      "name": "RoutingStats",
+      "filePath": "code/C9/api_server.py",
+      "lineRange": [
+        76,
+        92
+      ],
+      "summary": "路由统计数据模型，记录各检索策略（传统、图 RAG、组合）的使用次数及占比。",
+      "tags": [
+        "data-model",
+        "statistics",
+        "pydantic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/config.py:GraphRAGConfig",
+      "type": "class",
+      "name": "GraphRAGConfig",
+      "filePath": "code/C9/config.py",
+      "lineRange": [
+        9,
+        70
+      ],
+      "summary": "系统全局配置数据类，涵盖 Neo4j 连接、Milvus 向量数据库、嵌入模型、LLM 调用参数及文档分块策略等全部可配置项。",
+      "tags": [
+        "config",
+        "dataclass",
+        "settings",
+        "singleton"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/main.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "code/C9/main.py",
+      "lineRange": [
+        417,
+        438
+      ],
+      "summary": "程序入口函数，创建 AdvancedGraphRAGSystem 实例，依次执行初始化和知识库构建，然后启动交互式问答循环。",
+      "tags": [
+        "entry-point",
+        "cli",
+        "bootstrap"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/main.py:AdvancedGraphRAGSystem",
+      "type": "class",
+      "name": "AdvancedGraphRAGSystem",
+      "filePath": "code/C9/main.py",
+      "lineRange": [
+        33,
+        415
+      ],
+      "summary": "C9 烹饪 RAG 系统的核心编排器类，负责管理数据准备、向量索引、混合检索、图 RAG 检索、查询路由和答案生成等全部模块的生命周期，并协调它们之间的协作完成烹饪问答。",
+      "tags": [
+        "orchestrator",
+        "facade",
+        "rag-system",
+        "core"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:code/C9/rag_modules/graph_rag_retrieval.py:GraphRAGRetrieval",
+      "type": "class",
+      "name": "GraphRAGRetrieval",
+      "filePath": "code/C9/rag_modules/graph_rag_retrieval.py",
+      "lineRange": [
+        55,
+        701
+      ],
+      "summary": "基于 Neo4j 的图 RAG 检索核心类，封装图索引构建、查询理解、多跳遍历、子图抽取、结构推理和自适应查询规划等完整检索流程。",
+      "tags": [
+        "graph-retrieval",
+        "neo4j",
+        "multi-hop",
+        "core"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:code/C9/rag_modules/intelligent_query_router.py:IntelligentQueryRouter",
+      "type": "class",
+      "name": "IntelligentQueryRouter",
+      "filePath": "code/C9/rag_modules/intelligent_query_router.py",
+      "lineRange": [
+        35,
+        305
+      ],
+      "summary": "智能查询路由核心类，通过 LLM 语义分析评估查询特征，自动选择混合检索、图 RAG 检索或组合检索三种策略之一，并跟踪路由使用统计。",
+      "tags": [
+        "query-router",
+        "strategy",
+        "routing",
+        "core"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:code/C9/rag_modules/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "code/C9/rag_modules/__init__.py",
+      "summary": "RAG 模块包的入口文件，通过 __all__ 列表统一重导出 GraphDataPreparationModule、MilvusIndexConstructionModule、HybridRetrievalModule 和 GenerationIntegrationModule 四个核心模块类。",
+      "tags": [
+        "入口点",
+        "包管理",
+        "barrel",
+        "rag"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:code/C9/rag_modules/generation_integration.py",
+      "type": "file",
+      "name": "generation_integration.py",
+      "filePath": "code/C9/rag_modules/generation_integration.py",
+      "summary": "答案生成集成模块，基于 OpenAI 兼容 API（Kimi/Moonshot）实现的 LLM 答案生成服务，支持标准生成与带重试机制的流式生成两种模式。",
+      "tags": [
+        "答案生成",
+        "llm",
+        "流式输出",
+        "rag"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "type": "file",
+      "name": "graph_data_preparation.py",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "summary": "图数据库数据准备模块，负责从 Neo4j 加载菜谱知识图谱数据（Recipe、Ingredient、CookingStep 节点及关系），构建结构化的 LangChain Document，并按章节或固定长度进行文档分块。",
+      "tags": [
+        "数据准备",
+        "neo4j",
+        "图数据库",
+        "文档构建",
+        "rag"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "type": "file",
+      "name": "milvus_index_construction.py",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "summary": "Milvus 向量索引构建模块，负责将文档块通过 HuggingFace 嵌入模型向量化后存入 Milvus，支持集合创建、HNSW 索引构建、相似度搜索、增量文档添加及集合生命周期管理。",
+      "tags": [
+        "向量索引",
+        "milvus",
+        "嵌入模型",
+        "相似度搜索",
+        "rag"
+      ],
+      "complexity": "complex",
+      "languageNotes": "使用 BAAI/bge-small-zh-v1.5 中文嵌入模型，512 维向量，HNSW 索引 + COSINE 相似度，支持过滤条件的标量字段索引。"
+    },
+    {
+      "id": "class:code/C9/rag_modules/generation_integration.py:GenerationIntegrationModule",
+      "type": "class",
+      "name": "GenerationIntegrationModule",
+      "filePath": "code/C9/rag_modules/generation_integration.py",
+      "lineRange": [
+        15,
+        175
+      ],
+      "summary": "LLM 答案生成类，封装 OpenAI 兼容客户端，提供自适应答案生成和带重试降级的流式生成两种接口。",
+      "tags": [
+        "答案生成",
+        "llm",
+        "api-handler",
+        "流式生成"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/generation_integration.py:__init__",
+      "type": "function",
+      "name": "__init__",
+      "filePath": "code/C9/rag_modules/generation_integration.py",
+      "lineRange": [
+        18,
+        36
+      ],
+      "summary": "初始化生成模块，从环境变量读取 API 密钥和基础 URL，创建 OpenAI 兼容客户端连接。",
+      "tags": [
+        "初始化",
+        "配置",
+        "openai"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/rag_modules/generation_integration.py:generate_adaptive_answer",
+      "type": "function",
+      "name": "generate_adaptive_answer",
+      "filePath": "code/C9/rag_modules/generation_integration.py",
+      "lineRange": [
+        38,
+        89
+      ],
+      "summary": "自适应答案生成，将检索文档拼接为上下文，构建 LightRAG 风格的统一提示词，通过 LLM 生成自适应回答（非流式）。",
+      "tags": [
+        "答案生成",
+        "llm",
+        "提示词"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/rag_modules/generation_integration.py:generate_adaptive_answer_stream",
+      "type": "function",
+      "name": "generate_adaptive_answer_stream",
+      "filePath": "code/C9/rag_modules/generation_integration.py",
+      "lineRange": [
+        91,
+        175
+      ],
+      "summary": "流式答案生成（带重试降级），使用 yield 逐块返回 LLM 输出，失败时递增等待重试，全部重试失败后降级为非流式生成。",
+      "tags": [
+        "答案生成",
+        "llm",
+        "流式输出",
+        "重试机制"
+      ],
+      "complexity": "complex",
+      "languageNotes": "生成器函数使用 yield 实现流式输出，带指数退避重试和 fallback 降级策略。"
+    },
+    {
+      "id": "class:code/C9/rag_modules/graph_data_preparation.py:GraphNode",
+      "type": "class",
+      "name": "GraphNode",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "lineRange": [
+        16,
+        21
+      ],
+      "summary": "图节点数据结构（dataclass），统一表示 Neo4j 中的 Recipe、Ingredient、CookingStep 等节点类型。",
+      "tags": [
+        "数据模型",
+        "图节点",
+        "dataclass"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/rag_modules/graph_data_preparation.py:GraphRelation",
+      "type": "class",
+      "name": "GraphRelation",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "lineRange": [
+        24,
+        29
+      ],
+      "summary": "图关系数据结构（dataclass），表示 Neo4j 中节点间的边，包含起始节点、终止节点和关系类型。",
+      "tags": [
+        "数据模型",
+        "图关系",
+        "dataclass"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/rag_modules/graph_data_preparation.py:GraphDataPreparationModule",
+      "type": "class",
+      "name": "GraphDataPreparationModule",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "lineRange": [
+        31,
+        458
+      ],
+      "summary": "图数据准备核心类，封装 Neo4j 连接管理、节点/关系加载、结构化文档构建和章节/固定长度分块等完整数据流水线。",
+      "tags": [
+        "数据准备",
+        "知识图谱",
+        "neo4j",
+        "文档转换"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/rag_modules/graph_data_preparation.py:__init__",
+      "type": "function",
+      "name": "__init__",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "lineRange": [
+        34,
+        55
+      ],
+      "summary": "初始化 Neo4j 连接参数并自动建立数据库连接，同时初始化文档、分块和各节点类型的空列表。",
+      "tags": [
+        "初始化",
+        "neo4j",
+        "连接"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/graph_data_preparation.py:_connect",
+      "type": "function",
+      "name": "_connect",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "lineRange": [
+        57,
+        76
+      ],
+      "summary": "建立 Neo4j Bolt 驱动连接，执行测试查询验证连接成功后记录日志，失败则抛出异常。",
+      "tags": [
+        "neo4j",
+        "连接",
+        "数据库"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/graph_data_preparation.py:load_graph_data",
+      "type": "function",
+      "name": "load_graph_data",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "lineRange": [
+        84,
+        177
+      ],
+      "summary": "从 Neo4j 加载所有 Recipe、Ingredient 和 CookingStep 节点，自动关联 Category 分类信息并封装为 GraphNode 对象。",
+      "tags": [
+        "数据加载",
+        "cypher",
+        "neo4j",
+        "知识图谱"
+      ],
+      "complexity": "complex",
+      "languageNotes": "使用 Cypher OPTIONAL MATCH 关联 Category 节点，通过 nodeId >= '200000000' 过滤实例节点，避免加载分类元数据节点。"
+    },
+    {
+      "id": "function:code/C9/rag_modules/graph_data_preparation.py:build_recipe_documents",
+      "type": "function",
+      "name": "build_recipe_documents",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "lineRange": [
+        179,
+        312
+      ],
+      "summary": "遍历菜谱节点，通过 Cypher 查询关联的食材（REQUIRES）和烹饪步骤（CONTAINS_STEP），组装为结构化的 Markdown 文档并封装为 LangChain Document 对象。",
+      "tags": [
+        "文档构建",
+        "cypher",
+        "知识图谱",
+        "langchain"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/rag_modules/graph_data_preparation.py:chunk_documents",
+      "type": "function",
+      "name": "chunk_documents",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "lineRange": [
+        314,
+        409
+      ],
+      "summary": "文档分块处理，短文档保持完整，长文档优先按二级标题章节分割，无标题时按固定大小（默认 500 字符、50 字符重叠）强制分块。",
+      "tags": [
+        "文档分块",
+        "文本处理",
+        "langchain"
+      ],
+      "complexity": "complex",
+      "languageNotes": "采用混合分块策略：按 Markdown 章节语义分割为主，固定长度滑动窗口为辅，保留 chunk_id/parent_id 父子关联元数据。"
+    },
+    {
+      "id": "function:code/C9/rag_modules/graph_data_preparation.py:get_statistics",
+      "type": "function",
+      "name": "get_statistics",
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "lineRange": [
+        413,
+        452
+      ],
+      "summary": "统计已加载数据的概况信息，包括节点数量、文档数量、分类/菜系/难度分布及平均内容/分块长度。",
+      "tags": [
+        "统计",
+        "数据分析",
+        "工具函数"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:code/C9/rag_modules/milvus_index_construction.py:MilvusIndexConstructionModule",
+      "type": "class",
+      "name": "MilvusIndexConstructionModule",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        16,
+        503
+      ],
+      "summary": "Milvus 向量索引核心类，封装 Milvus 客户端连接、嵌入模型初始化、集合 Schema 定义、HNSW 索引构建、文档向量化写入、相似度搜索及完整的集合生命周期管理。",
+      "tags": [
+        "向量索引",
+        "milvus",
+        "嵌入",
+        "语义搜索"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:__init__",
+      "type": "function",
+      "name": "__init__",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        19,
+        46
+      ],
+      "summary": "初始化 Milvus 连接参数、集合名称、向量维度和嵌入模型名称，自动建立客户端连接并加载嵌入模型。",
+      "tags": [
+        "初始化",
+        "milvus",
+        "配置"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:_safe_truncate",
+      "type": "function",
+      "name": "_safe_truncate",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        48,
+        61
+      ],
+      "summary": "安全字符串截取工具函数，处理 None 值并截断至指定最大长度，防止 Milvus 写入时字段超长。",
+      "tags": [
+        "工具函数",
+        "字符串处理",
+        "数据安全"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:_setup_client",
+      "type": "function",
+      "name": "_setup_client",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        63,
+        77
+      ],
+      "summary": "建立 Milvus HTTP 客户端连接，列出已有集合以验证连接可用性。",
+      "tags": [
+        "milvus",
+        "连接",
+        "客户端"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:_setup_embeddings",
+      "type": "function",
+      "name": "_setup_embeddings",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        79,
+        89
+      ],
+      "summary": "初始化 HuggingFace 嵌入模型（默认 BAAI/bge-small-zh-v1.5），配置 CPU 设备和归一化编码参数。",
+      "tags": [
+        "嵌入模型",
+        "huggingface",
+        "初始化"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:_create_collection_schema",
+      "type": "function",
+      "name": "_create_collection_schema",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        91,
+        120
+      ],
+      "summary": "定义 Milvus 集合 Schema，包含 id（主键）、vector（512 维浮点向量）、text、node_id、recipe_name 等 12 个字段。",
+      "tags": [
+        "schema",
+        "milvus",
+        "数据建模"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:create_collection",
+      "type": "function",
+      "name": "create_collection",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        122,
+        160
+      ],
+      "summary": "创建 Milvus 集合，支持 force_recreate 参数强制重建，使用 COSINE 度量类型和 Strong 一致性级别。",
+      "tags": [
+        "milvus",
+        "集合管理",
+        "初始化"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:create_index",
+      "type": "function",
+      "name": "create_index",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        162,
+        197
+      ],
+      "summary": "为向量字段创建 HNSW 索引（M=16, efConstruction=200, COSINE），提升大规模向量检索性能。",
+      "tags": [
+        "milvus",
+        "hnsw",
+        "索引构建"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:build_vector_index",
+      "type": "function",
+      "name": "build_vector_index",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        199,
+        271
+      ],
+      "summary": "完整的向量索引构建流水线：创建集合 → 批量嵌入向量化 → 分批写入 Milvus → 创建 HNSW 索引 → 加载集合到内存。",
+      "tags": [
+        "向量索引",
+        "milvus",
+        "流水线",
+        "批量处理"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:add_documents",
+      "type": "function",
+      "name": "add_documents",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        273,
+        323
+      ],
+      "summary": "向已有 Milvus 集合增量添加新文档块，生成向量并构造实体数据后批量写入。",
+      "tags": [
+        "milvus",
+        "增量更新",
+        "文档管理"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:similarity_search",
+      "type": "function",
+      "name": "similarity_search",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        325,
+        415
+      ],
+      "summary": "向量相似度搜索，支持多类型过滤条件（字符串、数值、列表 IN 操作），返回格式化的搜索结果含元数据和 COSINE 相似度分数。",
+      "tags": [
+        "相似度搜索",
+        "milvus",
+        "向量检索",
+        "过滤"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:get_collection_stats",
+      "type": "function",
+      "name": "get_collection_stats",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        417,
+        438
+      ],
+      "summary": "获取 Milvus 集合的统计信息，包括行数和索引构建进度。",
+      "tags": [
+        "milvus",
+        "统计",
+        "工具函数"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:delete_collection",
+      "type": "function",
+      "name": "delete_collection",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        440,
+        459
+      ],
+      "summary": "删除指定的 Milvus 集合，重置内部创建状态标记。",
+      "tags": [
+        "milvus",
+        "集合管理",
+        "清理"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:has_collection",
+      "type": "function",
+      "name": "has_collection",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        461,
+        472
+      ],
+      "summary": "检查指定名称的 Milvus 集合是否已存在。",
+      "tags": [
+        "milvus",
+        "集合管理",
+        "查询"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/rag_modules/milvus_index_construction.py:load_collection",
+      "type": "function",
+      "name": "load_collection",
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "lineRange": [
+        474,
+        493
+      ],
+      "summary": "将已存在的 Milvus 集合加载到内存中以支持搜索操作，同时标记集合已创建。",
+      "tags": [
+        "milvus",
+        "内存加载",
+        "集合管理"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "type": "file",
+      "name": "batch_manager.py",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "summary": "批量处理和增量更新的命令行管理工具，支持菜谱批处理、进度查看/清理、批次合并导出、增量更新等多种操作模式，是菜谱知识图谱构建流程的管理入口。",
+      "tags": [
+        "batch-processing",
+        "cli",
+        "recipe-parsing",
+        "utility",
+        "入口点"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "type": "file",
+      "name": "recipe_ai_agent.py",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "summary": "菜谱知识图谱构建核心模块，包含数据结构定义（RecipeInfo、IngredientInfo 等 dataclass）、基于 Kimi LLM 的菜谱信息抽取代理（KimiRecipeAgent）以及完整的知识图谱构建器（RecipeKnowledgeGraphBuilder），支持批处理、增量更新、RF2 格式和 Neo4j CSV 等多种格式导出。",
+      "tags": [
+        "recipe-parsing",
+        "knowledge-graph",
+        "llm-integration",
+        "data-model",
+        "batch-processing"
+      ],
+      "complexity": "complex",
+      "languageNotes": "使用 Python dataclass 定义菜谱数据结构（FileManifestEntry、IngredientInfo、CookingStep、RecipeInfo），通过 OpenAI 兼容客户端调用 Kimi/Moonshot API 进行菜谱信息抽取，RecipeKnowledgeGraphBuilder 类包含 24 个方法实现完整的知识图谱构建、增量和导出流水线。"
+    },
+    {
+      "id": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "type": "file",
+      "name": "run_ai_agent.py",
+      "filePath": "code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "summary": "菜谱 AI 解析的命令行入口程序，提供测试单菜谱、批量处理和增量处理三种运行模式，负责配置加载、API 密钥设置、菜谱目录获取，并编排 KimiRecipeAgent 和 RecipeKnowledgeGraphBuilder 的调用流程。",
+      "tags": [
+        "入口点",
+        "cli",
+        "recipe-parsing",
+        "orchestration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:load_config",
+      "type": "function",
+      "name": "load_config",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        14,
+        22
+      ],
+      "summary": "加载并解析 config.json 配置文件，文件不存在时打印错误并退出。",
+      "tags": [
+        "configuration",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:show_progress_status",
+      "type": "function",
+      "name": "show_progress_status",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        24,
+        55
+      ],
+      "summary": "读取进度文件并展示当前处理进度状态，包括已处理文件数、完成状态及各批次目录信息。",
+      "tags": [
+        "cli",
+        "progress-tracking",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:clean_progress",
+      "type": "function",
+      "name": "clean_progress",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        57,
+        69
+      ],
+      "summary": "交互式确认后删除进度文件，用于重置所有处理进度。",
+      "tags": [
+        "cli",
+        "progress-tracking",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:clean_batches",
+      "type": "function",
+      "name": "clean_batches",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        71,
+        93
+      ],
+      "summary": "列出所有批次目录，交互式确认后删除全部批次数据文件。",
+      "tags": [
+        "cli",
+        "batch-processing",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:merge_batches",
+      "type": "function",
+      "name": "merge_batches",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        95,
+        122
+      ],
+      "summary": "合并所有已处理的批次数据，调用 RecipeKnowledgeGraphBuilder 进行批次合并后导出为 Neo4j CSV 格式。",
+      "tags": [
+        "batch-processing",
+        "knowledge-graph",
+        "orchestration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:continue_processing",
+      "type": "function",
+      "name": "continue_processing",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        124,
+        148
+      ],
+      "summary": "继续或重新开始菜谱批量处理，支持从上次中断处恢复，处理完成后自动触发批次合并。",
+      "tags": [
+        "batch-processing",
+        "orchestration",
+        "resumability"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:show_manifest",
+      "type": "function",
+      "name": "show_manifest",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        150,
+        175
+      ],
+      "summary": "读取并展示文件清单（manifest），显示各菜谱文件的修改时间、哈希值和对应的概念 ID。",
+      "tags": [
+        "cli",
+        "progress-tracking",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:incremental_update",
+      "type": "function",
+      "name": "incremental_update",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        177,
+        205
+      ],
+      "summary": "执行增量更新处理，仅处理自上次运行以来新增或修改的菜谱文件，通过文件哈希比对实现变更检测。",
+      "tags": [
+        "batch-processing",
+        "incremental",
+        "orchestration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:show_batch_details",
+      "type": "function",
+      "name": "show_batch_details",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        207,
+        253
+      ],
+      "summary": "展示指定批次的详细统计信息，包括该批次的节点数、关系数和进度状态。",
+      "tags": [
+        "cli",
+        "batch-processing",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/batch_manager.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "lineRange": [
+        255,
+        336
+      ],
+      "summary": "命令行入口函数，使用 argparse 定义多个子命令（status、continue-processing、incremental、manifest、merge、clean-progress、clean-batches、details），路由到对应的处理函数。",
+      "tags": [
+        "入口点",
+        "cli",
+        "orchestration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:FileManifestEntry",
+      "type": "class",
+      "name": "FileManifestEntry",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        20,
+        28
+      ],
+      "summary": "文件清单条目数据类，记录菜谱文件的路径、修改时间、哈希值以及关联的概念 ID（recipe、ingredient、step、relationship）。",
+      "tags": [
+        "data-model",
+        "dataclass"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:IngredientInfo",
+      "type": "class",
+      "name": "IngredientInfo",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        31,
+        37
+      ],
+      "summary": "食材信息数据类，包含食材名称、用量、单位、类别和是否为主料的标记。",
+      "tags": [
+        "data-model",
+        "dataclass"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:CookingStep",
+      "type": "class",
+      "name": "CookingStep",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        40,
+        46
+      ],
+      "summary": "烹饪步骤数据类，包含步骤序号、描述、烹饪方法、所需工具和时间预估。",
+      "tags": [
+        "data-model",
+        "dataclass"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeInfo",
+      "type": "class",
+      "name": "RecipeInfo",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        49,
+        71
+      ],
+      "summary": "菜谱信息数据类，包含菜名、难度、分类、菜系、准备/烹饪时间、份数、食材列表、步骤列表、标签和营养信息，通过 __post_init__ 自动推断菜系类型。",
+      "tags": [
+        "data-model",
+        "dataclass"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "type": "class",
+      "name": "KimiRecipeAgent",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        73,
+        318
+      ],
+      "summary": "基于 Kimi/Moonshot LLM 的菜谱信息抽取代理，负责将 Markdown 菜谱文本通过 LLM 解析为结构化的 RecipeInfo 对象，包含 API 调用、分类推断、JSON 解析及回退解析策略。",
+      "tags": [
+        "llm-integration",
+        "recipe-parsing",
+        "agent"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "type": "class",
+      "name": "RecipeKnowledgeGraphBuilder",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        320,
+        1537
+      ],
+      "summary": "菜谱知识图谱构建器，是系统的核心类，包含知识图谱的完整构建流水线：批次处理、增量更新、文件清单管理、概念 ID 生成、同义词生成、多种格式导出（CSV、RF2、Neo4j CSV）等功能。",
+      "tags": [
+        "knowledge-graph",
+        "batch-processing",
+        "export",
+        "数据模型"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        1539,
+        1578
+      ],
+      "summary": "独立运行入口函数，解析命令行参数并启动菜谱批量处理及导出流水线。",
+      "tags": [
+        "入口点",
+        "cli",
+        "orchestration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent.extract_recipe_info",
+      "type": "function",
+      "name": "KimiRecipeAgent.extract_recipe_info",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        148,
+        287
+      ],
+      "summary": "菜谱信息抽取核心方法，构建详细的 LLM 提示词，调用 Kimi API 将 Markdown 菜谱解析为 JSON 结构，并映射到 RecipeInfo 及子对象（IngredientInfo、CookingStep），失败时执行回退解析。",
+      "tags": [
+        "llm-integration",
+        "recipe-parsing",
+        "核心方法"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent.call_kimi_api",
+      "type": "function",
+      "name": "KimiRecipeAgent.call_kimi_api",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        108,
+        135
+      ],
+      "summary": "调用 Kimi/Moonshot API 发送聊天请求，支持 temperature 参数和最大重试次数，失败时等待后重试。",
+      "tags": [
+        "llm-integration",
+        "api-client"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.batch_process_recipes",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder.batch_process_recipes",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        1156,
+        1282
+      ],
+      "summary": "批量处理菜谱文件的核心方法，支持断点续传，将菜谱目录下的 markdown 文件分批处理为知识图谱概念和关系节点，每批完成后保存进度。",
+      "tags": [
+        "batch-processing",
+        "核心方法",
+        "resumability"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_neo4j_csv",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder.export_to_neo4j_csv",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        1376,
+        1537
+      ],
+      "summary": "将知识图谱导出为 Neo4j 兼容的 CSV 格式（nodes.csv 和 relationships.csv），包括预定义概念、增量概念和关系数据的完整转换，同时生成 Cypher 导入脚本。",
+      "tags": [
+        "export",
+        "neo4j",
+        "csv",
+        "核心方法"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.incremental_process_recipes",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder.incremental_process_recipes",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        604,
+        720
+      ],
+      "summary": "增量处理菜谱文件，通过文件清单（manifest）和哈希比对检测新增/修改/删除的文件，仅处理变更的文件以提升效率。",
+      "tags": [
+        "incremental",
+        "批处理",
+        "核心方法"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.merge_all_batches",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder.merge_all_batches",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        864,
+        920
+      ],
+      "summary": "合并所有已处理的批次数据为统一的概念和关系集合，是批次间数据汇总的关键方法。",
+      "tags": [
+        "batch-processing",
+        "数据合并",
+        "核心方法"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.process_recipe",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder.process_recipe",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        936,
+        1020
+      ],
+      "summary": "处理单个菜谱文件，调用 KimiRecipeAgent 抽取 RecipeInfo 后转换为知识图谱的概念节点和关系边。",
+      "tags": [
+        "recipe-parsing",
+        "核心方法"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder._classify_changed_files",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder._classify_changed_files",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        558,
+        598
+      ],
+      "summary": "分类检测到的文件变更，将文件分为新增、修改和删除三类，用于增量处理决策。",
+      "tags": [
+        "incremental",
+        "file-detection",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder._generate_recipe_synonyms",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder._generate_recipe_synonyms",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        1023,
+        1040
+      ],
+      "summary": "为菜谱名称生成中英文同义词列表，用于增强知识图谱的搜索能力。",
+      "tags": [
+        "同义词",
+        "nlp",
+        "知识图谱增强"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder._generate_ingredient_synonyms",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder._generate_ingredient_synonyms",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        1130,
+        1152
+      ],
+      "summary": "基于预定义的食材同义词字典为食材生成中英文同义词列表，未匹配的食材也通过分类方法生成。",
+      "tags": [
+        "同义词",
+        "nlp",
+        "知识图谱增强"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_rf2_format",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder.export_to_rf2_format",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        1302,
+        1374
+      ],
+      "summary": "将知识图谱导出为 RF2（Release File Format 2）格式，生成概念文件、描述文件和关系文件（制表符分隔）。",
+      "tags": [
+        "export",
+        "rf2",
+        "数据导出"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_csv",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder.export_to_csv",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        1284,
+        1300
+      ],
+      "summary": "将当前批次的概念和关系数据导出为 CSV 文件，使用 pandas DataFrame 写入。",
+      "tags": [
+        "export",
+        "csv",
+        "数据导出"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder._format_synonyms_for_neo4j",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder._format_synonyms_for_neo4j",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        1087,
+        1118
+      ],
+      "summary": "将同义词数据格式化为 Neo4j 兼容的管道分隔字符串，支持 JSON 字符串、字典列表和纯文本多种格式。",
+      "tags": [
+        "同义词",
+        "neo4j",
+        "data-formatting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.generate_concept_id",
+      "type": "function",
+      "name": "RecipeKnowledgeGraphBuilder.generate_concept_id",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "lineRange": [
+        922,
+        934
+      ],
+      "summary": "生成知识图谱概念的唯一 ID，基于类别前缀编码和序号组合的层次化 ID 方案。",
+      "tags": [
+        "knowledge-graph",
+        "id-generation",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:load_config",
+      "type": "function",
+      "name": "load_config",
+      "filePath": "code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "lineRange": [
+        12,
+        29
+      ],
+      "summary": "加载 config.json 配置文件，文件不存在时提示错误并退出。",
+      "tags": [
+        "configuration",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:setup_api_key",
+      "type": "function",
+      "name": "setup_api_key",
+      "filePath": "code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "lineRange": [
+        31,
+        39
+      ],
+      "summary": "从环境变量或交互式输入获取 Kimi API 密钥，未设置时退出程序。",
+      "tags": [
+        "configuration",
+        "api-key",
+        "security"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:get_recipe_directory",
+      "type": "function",
+      "name": "get_recipe_directory",
+      "filePath": "code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "lineRange": [
+        41,
+        52
+      ],
+      "summary": "从命令行参数或交互式输入获取菜谱目录路径，验证目录是否存在。",
+      "tags": [
+        "cli",
+        "configuration",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:test_single_recipe",
+      "type": "function",
+      "name": "test_single_recipe",
+      "filePath": "code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "lineRange": [
+        54,
+        100
+      ],
+      "summary": "测试模式：对单个内置测试菜谱运行 KimiRecipeAgent 抽取流程，打印解析结果用于调试验证。",
+      "tags": [
+        "testing",
+        "recipe-parsing",
+        "调试"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "lineRange": [
+        102,
+        180
+      ],
+      "summary": "主入口函数，支持 test、batch 和 incremental 三种运行模式，负责串联配置加载、API 密钥验证、目录获取、Agent 初始化和知识图谱构建的完整流程。",
+      "tags": [
+        "入口点",
+        "cli",
+        "orchestration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:show_help",
+      "type": "function",
+      "name": "show_help",
+      "filePath": "code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "lineRange": [
+        182,
+        211
+      ],
+      "summary": "显示详细的命令行使用帮助信息，包括各运行模式的说明和示例。",
+      "tags": [
+        "cli",
+        "文档",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.mcp.json",
+      "type": "config",
+      "name": ".mcp.json",
+      "filePath": ".mcp.json",
+      "summary": "Claude Code 的 MCP 服务器配置文件，注册 codegraph 工具以提供代码智能分析能力。",
+      "tags": [
+        "mcp",
+        "configuration",
+        "codegraph",
+        "development-tools"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:CLAUDE.md",
+      "type": "document",
+      "name": "CLAUDE.md",
+      "filePath": "CLAUDE.md",
+      "summary": "C9（尝尝咸淡）项目的全面技术文档，涵盖项目概述、仓库结构、基础设施依赖、常用命令、系统架构、数据流、检索策略和 Neo4j 图数据库模式等 12 个章节。",
+      "tags": [
+        "documentation",
+        "project-overview",
+        "architecture",
+        "getting-started",
+        "infrastructure"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:opencode.jsonc",
+      "type": "config",
+      "name": "opencode.jsonc",
+      "filePath": "opencode.jsonc",
+      "summary": "OpenCode 编辑器的 MCP 配置，启用 codegraph 本地服务器以提供代码索引和智能分析功能。",
+      "tags": [
+        "mcp",
+        "configuration",
+        "codegraph",
+        "development-tools"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:code/C9/.env.example",
+      "type": "config",
+      "name": ".env.example",
+      "filePath": "code/C9/.env.example",
+      "summary": "环境变量配置模板，定义 Moonshot API 密钥、Neo4j 与 Milvus 数据库连接参数、嵌入模型及 LLM 模型选择、日志级别等运行时配置项。",
+      "tags": [
+        "configuration",
+        "environment",
+        "api-keys",
+        "settings",
+        "runtime"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:code/C9/docker-compose.yml",
+      "type": "service",
+      "name": "docker-compose.yml",
+      "filePath": "code/C9/docker-compose.yml",
+      "summary": "Milvus 向量数据库的 Docker Compose 编排文件，包含 etcd（元数据存储）、MinIO（对象存储）和 Milvus Standalone 三个服务，均配置了健康检查与持久化卷挂载。",
+      "tags": [
+        "infrastructure",
+        "containerization",
+        "milvus",
+        "vector-database",
+        "orchestration"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "采用 Compose v3.5 格式，通过 depends_on 控制服务启动顺序，各服务均配置健康检查确保就绪后才对外可用。"
+    },
+    {
+      "id": "service:code/C9/docker-compose.yml:etcd",
+      "type": "service",
+      "name": "etcd",
+      "filePath": "code/C9/docker-compose.yml",
+      "summary": "etcd v3.5.18 分布式键值存储服务，为 Milvus 提供元数据协调与存储，配置了自动压缩和快照参数。",
+      "tags": [
+        "metadata",
+        "coordination",
+        "distributed-storage"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:code/C9/docker-compose.yml:minio",
+      "type": "service",
+      "name": "minio",
+      "filePath": "code/C9/docker-compose.yml",
+      "summary": "MinIO S3 兼容对象存储服务，为 Milvus 提供向量数据持久化存储后端，暴露 9000（API）和 9001（控制台）端口。",
+      "tags": [
+        "object-storage",
+        "s3-compatible",
+        "persistence"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:code/C9/docker-compose.yml:standalone",
+      "type": "service",
+      "name": "standalone",
+      "filePath": "code/C9/docker-compose.yml",
+      "summary": "Milvus v2.5.14 单机版向量数据库服务，提供 19530（gRPC）和 9091（健康检查）端口，依赖 etcd 和 MinIO 协同工作。",
+      "tags": [
+        "vector-database",
+        "milvus",
+        "similarity-search",
+        "embedding"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:code/C9/requirements.txt",
+      "type": "document",
+      "name": "requirements.txt",
+      "filePath": "code/C9/requirements.txt",
+      "summary": "Python 项目依赖清单，涵盖 PyTorch 深度学习框架、LangChain 生态（core/community/huggingface）、Neo4j 与 Milvus 数据库驱动、BM25 检索、FastAPI Web 框架等核心依赖。",
+      "tags": [
+        "dependencies",
+        "python",
+        "machine-learning",
+        "nlp",
+        "web-framework"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+      "type": "document",
+      "name": "AI_AGENT_README.md",
+      "filePath": "code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+      "summary": "AI菜谱知识图谱生成器的完整使用文档，涵盖快速开始、项目结构、AI解析能力、知识图谱结构、配置选项、辅助工具（batch_manager和amount_normalizer）、高级用法、性能优化、故障排除、使用场景和扩展开发共45个章节，为基于Kimi大模型的智能菜谱解析系统提供全面技术参考。",
+      "tags": [
+        "documentation",
+        "ai-agent",
+        "knowledge-graph",
+        "recipe-parsing",
+        "entry-point"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:code/C9/agent(代码系ai生成)/config.json",
+      "type": "config",
+      "name": "config.json",
+      "filePath": "code/C9/agent(代码系ai生成)/config.json",
+      "summary": "AI菜谱解析系统的核心配置文件，定义Kimi API连接参数（api_key、base_url、model）、批处理并发控制（batch_size、延迟、最大并发数）、输出格式选项（Neo4j/CSV/RF2）、9种菜谱分类层级编码映射以及5级难度等级编码映射。",
+      "tags": [
+        "configuration",
+        "ai-agent",
+        "recipe-parsing",
+        "api-settings",
+        "category-mapping"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:code/C9/agent(代码系ai生成)/recipe_ontology_design.md",
+      "type": "document",
+      "name": "recipe_ontology_design.md",
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ontology_design.md",
+      "summary": "菜谱知识图谱本体设计方案，定义烹饪概念层级体系（含Recipe、Ingredient、Tool、CookingMethod等9大顶级概念）、分类体系（菜谱/食材/难度/烹饪方法4套编码方案）、6种核心与属性关系类型、预协调/后协调表达式系统、RF2数据文件结构、Neo4j图数据库实现技术栈及智能推荐、食材替代、知识推理和营养分析4大应用场景。",
+      "tags": [
+        "documentation",
+        "ontology-design",
+        "knowledge-graph",
+        "schema-definition",
+        "recipe"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:code/C9/agent(代码系ai生成)/requirements.txt",
+      "type": "document",
+      "name": "requirements.txt",
+      "filePath": "code/C9/agent(代码系ai生成)/requirements.txt",
+      "summary": "AI菜谱解析系统的Python依赖清单，包含pandas（数据处理）、neo4j驱动（图数据库连接）、openai SDK（Kimi API调用）、requests（HTTP请求）、dataclasses和pathlib2共6个核心包。",
+      "tags": [
+        "configuration",
+        "dependencies",
+        "python",
+        "ai-agent"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.cursor/mcp.json",
+      "type": "config",
+      "name": "mcp.json",
+      "filePath": ".cursor/mcp.json",
+      "summary": "Cursor IDE 的 MCP 服务器配置文件，将 codegraph 代码智能工具注册为 MCP 服务，指向当前项目根目录，为 Cursor 提供代码知识图谱索引能力。",
+      "tags": [
+        "configuration",
+        "mcp-server",
+        "code-intelligence",
+        "editor-integration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:.understand-anything/.understandignore",
+      "type": "file",
+      "name": ".understandignore",
+      "filePath": ".understand-anything/.understandignore",
+      "summary": "understand-anything 插件的分析忽略规则文件，语法兼容 .gitignore（glob 模式、注释、! 否定），用于控制代码分析时排除的文件和目录。当前所有规则均处于注释状态，作为模板供用户按需启用。",
+      "tags": [
+        "configuration",
+        "ignore-rules",
+        "analysis",
+        "template"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.understand-anything/config.json",
+      "type": "config",
+      "name": "config.json",
+      "filePath": ".understand-anything/config.json",
+      "summary": "understand-anything 插件的配置文件，设置输出语言为简体中文（zh），确保所有分析生成的文本内容使用中文表述。",
+      "tags": [
+        "configuration",
+        "localization",
+        "plugin-config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "type": "file",
+      "name": "amount_normalizer.py",
+      "filePath": "code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "summary": "中餐食谱用量标准化工具，将中文菜谱中常见的非数值用量表达（如\"适量\"\"少许\"\"一大勺\"）通过映射表和估算法则转换为标准化描述与可比较数值，解决食谱解析中用量模糊的问题。",
+      "tags": [
+        "utility",
+        "normalization",
+        "recipe-parsing",
+        "nlp",
+        "data-preprocessing"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "使用正则表达式和映射字典处理中文烹饪术语中的模糊量词，包含适量/少许/大勺/小勺/杯等中文特有计量单位的标准化逻辑。"
+    },
+    {
+      "id": "file:code/C9/landing-page/app.html",
+      "type": "file",
+      "name": "app.html",
+      "filePath": "code/C9/landing-page/app.html",
+      "summary": "C9 食谱问答系统的 SPA 主应用页面（790 行），提供完整的聊天问答界面、食谱文件上传、知识库重建控制和实时统计面板，通过 Tailwind CSS 构建现代中式风格的 UI。",
+      "tags": [
+        "frontend",
+        "spa",
+        "chat-interface",
+        "ui",
+        "tailwindcss"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:code/C9/landing-page/index.html",
+      "type": "file",
+      "name": "index.html",
+      "filePath": "code/C9/landing-page/index.html",
+      "summary": "C9 系统的产品营销落地页（398 行），展示产品特性亮点、三步使用流程、Neo4j+Milvus+Moonshot 技术架构及快速启动命令行引导，采用玻璃拟态设计风格。",
+      "tags": [
+        "frontend",
+        "landing-page",
+        "marketing",
+        "ui",
+        "tailwindcss"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:code/C9/rag_modules/graph_indexing.py",
+      "type": "file",
+      "name": "graph_indexing.py",
+      "filePath": "code/C9/rag_modules/graph_indexing.py",
+      "summary": "图索引模块，为 Neo4j 知识图谱中的烹饪实体和关系构建键值倒排索引，支持索引键生成、LLM 增强关系键扩展、实体/关系去重及多维统计，是混合检索系统的数据基础层。",
+      "tags": [
+        "data-model",
+        "indexing",
+        "knowledge-graph",
+        "neo4j",
+        "deduplication"
+      ],
+      "complexity": "complex",
+      "languageNotes": "使用 dataclass 定义 EntityKeyValue/RelationKeyValue 数据结构；通过 LLM 调用增强关系索引键的语义覆盖范围（_llm_enhance_relation_keys）；构建 entity_kv_store 和 key_to_entities 双映射实现正反向查询。"
+    },
+    {
+      "id": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "type": "file",
+      "name": "hybrid_retrieval.py",
+      "filePath": "code/C9/rag_modules/hybrid_retrieval.py",
+      "summary": "混合检索核心模块，实现实体级检索和主题级检索的双层策略，结合 Milvus 向量搜索（HNSW/COSINE）、BM25 关键词匹配和 Neo4j 图邻居扩展，通过轮询轮转合并算法融合多源结果，是 C9 系统检索管道的中枢。",
+      "tags": [
+        "retrieval",
+        "hybrid-search",
+        "vector-search",
+        "bm25",
+        "neo4j",
+        "milvus",
+        "rag"
+      ],
+      "complexity": "complex",
+      "languageNotes": "采用 round-robin 交错合并策略融合图检索与向量检索结果；通过 LLM 提取查询中的实体关键词和主题关键词驱动双层检索；支持 Neo4j Cypher 回退搜索作为键值索引的补充。"
+    },
+    {
+      "id": "file:data/C9/cypher/neo4j_import.cypher",
+      "type": "file",
+      "name": "neo4j_import.cypher",
+      "filePath": "data/C9/cypher/neo4j_import.cypher",
+      "summary": "Neo4j 烹饪知识图谱完整构建脚本（368 行），通过 LOAD CSV 导入 nodes.csv 和 relationships.csv 创建 Recipe/Ingredient/CookingStep 等节点及关系，包含约束索引创建、APOC 动态节点创建、分类体系构建、计算属性优化和统计信息生成。",
+      "tags": [
+        "database",
+        "migration",
+        "knowledge-graph",
+        "neo4j",
+        "cypher",
+        "data-import"
+      ],
+      "complexity": "complex",
+      "languageNotes": "使用 APOC 插件的 apoc.create.node/apoc.create.relationship 实现动态标签和关系类型创建；构建层次结构节点（ID < 200000000）和实例节点的分离导入逻辑；包含全文本索引、相似性关系、步骤序列关系和计算属性（totalTime/ingredientCount）等优化。"
+    },
+    {
+      "id": "table:data/C9/cypher/nodes.csv",
+      "type": "table",
+      "name": "nodes.csv",
+      "filePath": "data/C9/cypher/nodes.csv",
+      "summary": "烹饪知识图谱节点数据文件（5761 行），包含 Recipe（菜谱）、Ingredient（食材）、CookingStep（烹饪步骤）、CookingMethod（烹饪方法）等多种节点类型的完整属性数据，是 Neo4j 图数据库的核心数据源。",
+      "tags": [
+        "database",
+        "data-set",
+        "knowledge-graph",
+        "csv",
+        "neo4j"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "table:data/C9/cypher/relationships.csv",
+      "type": "table",
+      "name": "relationships.csv",
+      "filePath": "data/C9/cypher/relationships.csv",
+      "summary": "烹饪知识图谱关系数据文件（6056 行），定义节点之间的 REQUIRES（食材需求）、CONTAINS_STEP（步骤包含）、BELONGS_TO_CATEGORY（分类归属）等关系，含用量、单位和步骤顺序等属性。",
+      "tags": [
+        "database",
+        "data-set",
+        "knowledge-graph",
+        "csv",
+        "neo4j"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "service:data/C9/docker-compose.yml",
+      "type": "service",
+      "name": "docker-compose.yml",
+      "filePath": "data/C9/docker-compose.yml",
+      "summary": "Neo4j 5.18 图数据库及初始化服务的 Docker Compose 编排文件，部署 Neo4j 主服务（含 APOC 插件、健康检查、数据卷持久化）和一个初始化容器，后者自动等待 Neo4j 就绪后执行 neo4j_import.cypher 脚本完成知识图谱导入。",
+      "tags": [
+        "containerization",
+        "orchestration",
+        "neo4j",
+        "infrastructure",
+        "database"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "采用 service_healthy 条件依赖确保初始化容器在 Neo4j 完全就绪后执行；通过卷映射将本地 cypher 目录同时挂载为 /import 和 /scripts 供 LOAD CSV 和 cypher-shell 使用。"
+    },
+    {
+      "id": "class:code/C9/agent(代码系ai生成)/amount_normalizer.py:AmountNormalizer",
+      "type": "class",
+      "name": "AmountNormalizer",
+      "filePath": "code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "lineRange": [
+        10,
+        201
+      ],
+      "summary": "用量标准化器类，维护中文烹饪术语到标准化描述的映射表（适量/少许/大勺等），提供 normalize_amount、parse_amount_with_unit、get_comparable_value 和 format_for_display 四个核心方法，实现非精确用量的标准化和可比数值转换。",
+      "tags": [
+        "utility",
+        "normalization",
+        "recipe-parsing",
+        "nlp"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:code/C9/agent(代码系ai生成)/amount_normalizer.py:demo_normalization",
+      "type": "function",
+      "name": "demo_normalization",
+      "filePath": "code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "lineRange": [
+        204,
+        219
+      ],
+      "summary": "用量标准化功能演示函数，实例化 AmountNormalizer 并对一组典型的中文烹饪用量表达（适量/少许/2大勺等）运行标准化和格式化输出，用于验证和展示标准化效果。",
+      "tags": [
+        "demo",
+        "testing",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/rag_modules/graph_indexing.py:EntityKeyValue",
+      "type": "class",
+      "name": "EntityKeyValue",
+      "filePath": "code/C9/rag_modules/graph_indexing.py",
+      "lineRange": [
+        19,
+        25
+      ],
+      "summary": "实体键值数据结构，封装知识图谱中单个实体的名称、索引键列表、值内容、实体类型和元数据，作为图索引模块的数据载体。",
+      "tags": [
+        "data-model",
+        "dataclass",
+        "indexing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/rag_modules/graph_indexing.py:RelationKeyValue",
+      "type": "class",
+      "name": "RelationKeyValue",
+      "filePath": "code/C9/rag_modules/graph_indexing.py",
+      "lineRange": [
+        28,
+        36
+      ],
+      "summary": "关系键值数据结构，封装知识图谱中关系的标识、索引键列表、值内容、关系类型、源/目标实体及元数据，用于图索引的关系检索。",
+      "tags": [
+        "data-model",
+        "dataclass",
+        "indexing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/rag_modules/graph_indexing.py:GraphIndexingModule",
+      "type": "class",
+      "name": "GraphIndexingModule",
+      "filePath": "code/C9/rag_modules/graph_indexing.py",
+      "lineRange": [
+        38,
+        387
+      ],
+      "summary": "图索引核心模块，负责从 Neo4j 知识图谱中提取实体和关系数据并构建键值倒排索引。支持实体/关系索引创建、LLM 增强关系键扩展、重复数据检测与去重、索引重建及统计查询，为上层检索模块提供高效的键值查询能力。",
+      "tags": [
+        "indexing",
+        "knowledge-graph",
+        "neo4j",
+        "deduplication",
+        "llm"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:code/C9/rag_modules/hybrid_retrieval.py:RetrievalResult",
+      "type": "class",
+      "name": "RetrievalResult",
+      "filePath": "code/C9/rag_modules/hybrid_retrieval.py",
+      "lineRange": [
+        20,
+        27
+      ],
+      "summary": "检索结果数据结构，封装检索返回的内容、节点 ID、节点类型、相关性得分、检索层级（实体级/主题级/向量级）及附加元数据，作为混合检索各阶段统一的结果传递格式。",
+      "tags": [
+        "data-model",
+        "dataclass",
+        "retrieval"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:code/C9/rag_modules/hybrid_retrieval.py:HybridRetrievalModule",
+      "type": "class",
+      "name": "HybridRetrievalModule",
+      "filePath": "code/C9/rag_modules/hybrid_retrieval.py",
+      "lineRange": [
+        29,
+        603
+      ],
+      "summary": "混合检索引擎核心类，整合图索引查询（实体级+主题级双层检索）、Neo4j Cypher 回退搜索、Milvus 向量搜索增强和 BM25 关键词匹配，通过轮询轮转策略融合多源结果，是 C9 系统检索管道的中心调度器。",
+      "tags": [
+        "retrieval",
+        "hybrid-search",
+        "vector-search",
+        "neo4j",
+        "milvus",
+        "rag"
+      ],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:_make_analysis_response",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:lifespan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:_check_system_ready",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:health_check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:get_stats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:chat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:_stream_chat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:rebuild_knowledge_base",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:upload_recipe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "class:code/C9/api_server.py:RoutingStats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/config.py",
+      "target": "class:code/C9/config.py:GraphRAGConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "function:code/C9/main.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "class:code/C9/main.py:AdvancedGraphRAGSystem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_rag_retrieval.py",
+      "target": "class:code/C9/rag_modules/graph_rag_retrieval.py:GraphRAGRetrieval",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/intelligent_query_router.py",
+      "target": "class:code/C9/rag_modules/intelligent_query_router.py:IntelligentQueryRouter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:_make_analysis_response",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:lifespan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:_check_system_ready",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:health_check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:get_stats",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:chat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:_stream_chat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:rebuild_knowledge_base",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "function:code/C9/api_server.py:upload_recipe",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "class:code/C9/api_server.py:RoutingStats",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/config.py",
+      "target": "class:code/C9/config.py:GraphRAGConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "function:code/C9/main.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "class:code/C9/main.py:AdvancedGraphRAGSystem",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_rag_retrieval.py",
+      "target": "class:code/C9/rag_modules/graph_rag_retrieval.py:GraphRAGRetrieval",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/intelligent_query_router.py",
+      "target": "class:code/C9/rag_modules/intelligent_query_router.py:IntelligentQueryRouter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "file:code/C9/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "file:code/C9/main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "file:code/C9/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "file:code/C9/rag_modules/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "file:code/C9/rag_modules/graph_rag_retrieval.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "file:code/C9/rag_modules/intelligent_query_router.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "file:code/C9/main.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:code/C9/api_server.py",
+      "target": "file:code/C9/config.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "file:code/C9/rag_modules/graph_rag_retrieval.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "file:code/C9/rag_modules/intelligent_query_router.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:code/C9/main.py",
+      "target": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "function:code/C9/main.py:main",
+      "target": "class:code/C9/main.py:AdvancedGraphRAGSystem",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/api_server.py:lifespan",
+      "target": "class:code/C9/main.py:AdvancedGraphRAGSystem",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:code/C9/main.py:AdvancedGraphRAGSystem",
+      "target": "class:code/C9/rag_modules/graph_rag_retrieval.py:GraphRAGRetrieval",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:code/C9/main.py:AdvancedGraphRAGSystem",
+      "target": "class:code/C9/rag_modules/intelligent_query_router.py:IntelligentQueryRouter",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/__init__.py",
+      "target": "file:code/C9/rag_modules/generation_integration.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/rag_modules/__init__.py",
+      "target": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/rag_modules/__init__.py",
+      "target": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/rag_modules/__init__.py",
+      "target": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/rag_modules/generation_integration.py",
+      "target": "class:code/C9/rag_modules/generation_integration.py:GenerationIntegrationModule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/generation_integration.py",
+      "target": "function:code/C9/rag_modules/generation_integration.py:__init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/generation_integration.py",
+      "target": "function:code/C9/rag_modules/generation_integration.py:generate_adaptive_answer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/generation_integration.py",
+      "target": "function:code/C9/rag_modules/generation_integration.py:generate_adaptive_answer_stream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/generation_integration.py",
+      "target": "class:code/C9/rag_modules/generation_integration.py:GenerationIntegrationModule",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/rag_modules/generation_integration.py:generate_adaptive_answer_stream",
+      "target": "function:code/C9/rag_modules/generation_integration.py:generate_adaptive_answer",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "class:code/C9/rag_modules/graph_data_preparation.py:GraphNode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "class:code/C9/rag_modules/graph_data_preparation.py:GraphRelation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "class:code/C9/rag_modules/graph_data_preparation.py:GraphDataPreparationModule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "function:code/C9/rag_modules/graph_data_preparation.py:__init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "function:code/C9/rag_modules/graph_data_preparation.py:_connect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "function:code/C9/rag_modules/graph_data_preparation.py:load_graph_data",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "function:code/C9/rag_modules/graph_data_preparation.py:build_recipe_documents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "function:code/C9/rag_modules/graph_data_preparation.py:chunk_documents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "function:code/C9/rag_modules/graph_data_preparation.py:get_statistics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "class:code/C9/rag_modules/graph_data_preparation.py:GraphNode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "class:code/C9/rag_modules/graph_data_preparation.py:GraphRelation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "target": "class:code/C9/rag_modules/graph_data_preparation.py:GraphDataPreparationModule",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/rag_modules/graph_data_preparation.py:__init__",
+      "target": "function:code/C9/rag_modules/graph_data_preparation.py:_connect",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "class:code/C9/rag_modules/milvus_index_construction.py:MilvusIndexConstructionModule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:__init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:_safe_truncate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:_setup_client",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:_setup_embeddings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:_create_collection_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:create_collection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:create_index",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:build_vector_index",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:add_documents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:similarity_search",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:get_collection_stats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:delete_collection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:has_collection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:load_collection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "target": "class:code/C9/rag_modules/milvus_index_construction.py:MilvusIndexConstructionModule",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/rag_modules/milvus_index_construction.py:__init__",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:_setup_client",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/rag_modules/milvus_index_construction.py:__init__",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:_setup_embeddings",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/rag_modules/milvus_index_construction.py:create_collection",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:_create_collection_schema",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/rag_modules/milvus_index_construction.py:build_vector_index",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:create_collection",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/rag_modules/milvus_index_construction.py:build_vector_index",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:create_index",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/rag_modules/milvus_index_construction.py:build_vector_index",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:_safe_truncate",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/rag_modules/milvus_index_construction.py:add_documents",
+      "target": "function:code/C9/rag_modules/milvus_index_construction.py:_safe_truncate",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:load_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:show_progress_status",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:clean_progress",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:clean_batches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:merge_batches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:continue_processing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:show_manifest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:incremental_update",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:show_batch_details",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:load_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:show_progress_status",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:clean_progress",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:clean_batches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:merge_batches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:continue_processing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:show_manifest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:incremental_update",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:show_batch_details",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "function:code/C9/agent(代码系ai生成)/batch_manager.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "target": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:FileManifestEntry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:IngredientInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:CookingStep",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent.extract_recipe_info",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent.call_kimi_api",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.batch_process_recipes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_neo4j_csv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.incremental_process_recipes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.merge_all_batches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.process_recipe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder._classify_changed_files",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder._generate_recipe_synonyms",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder._generate_ingredient_synonyms",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_rf2_format",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_csv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder._format_synonyms_for_neo4j",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.generate_concept_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:FileManifestEntry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:IngredientInfo",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:CookingStep",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeInfo",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:load_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:setup_api_key",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:get_recipe_directory",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:test_single_recipe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:show_help",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:load_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:setup_api_key",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:get_recipe_directory",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:test_single_recipe",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:show_help",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "target": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/batch_manager.py:merge_batches",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/batch_manager.py:merge_batches",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/batch_manager.py:merge_batches",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.merge_all_batches",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/batch_manager.py:merge_batches",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_neo4j_csv",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/batch_manager.py:continue_processing",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/batch_manager.py:continue_processing",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/batch_manager.py:continue_processing",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.batch_process_recipes",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/batch_manager.py:incremental_update",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/batch_manager.py:incremental_update",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:test_single_recipe",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:test_single_recipe",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent.extract_recipe_info",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:KimiRecipeAgent",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "target": "class:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.incremental_process_recipes",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.batch_process_recipes",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_neo4j_csv",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_rf2_format",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:code/C9/agent(代码系ai生成)/run_ai_agent.py:main",
+      "target": "function:code/C9/agent(代码系ai生成)/recipe_ai_agent.py:RecipeKnowledgeGraphBuilder.export_to_csv",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "config:.mcp.json",
+      "target": "config:opencode.jsonc",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/main.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/config.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/rag_modules/graph_data_preparation.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/rag_modules/graph_indexing.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/rag_modules/graph_rag_retrieval.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/rag_modules/intelligent_query_router.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:code/C9/rag_modules/generation_integration.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "file:data/C9/cypher/neo4j_import.cypher",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "service:code/C9/docker-compose.yml",
+      "target": "service:code/C9/docker-compose.yml:etcd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "service:code/C9/docker-compose.yml",
+      "target": "service:code/C9/docker-compose.yml:minio",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "service:code/C9/docker-compose.yml",
+      "target": "service:code/C9/docker-compose.yml:standalone",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "service:code/C9/docker-compose.yml:standalone",
+      "target": "service:code/C9/docker-compose.yml:etcd",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "service:code/C9/docker-compose.yml:standalone",
+      "target": "service:code/C9/docker-compose.yml:minio",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:code/C9/.env.example",
+      "target": "file:code/C9/main.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:code/C9/.env.example",
+      "target": "file:code/C9/config.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:code/C9/.env.example",
+      "target": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "service:code/C9/docker-compose.yml",
+      "target": "file:code/C9/main.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "service:code/C9/docker-compose.yml",
+      "target": "file:code/C9/rag_modules/milvus_index_construction.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:code/C9/requirements.txt",
+      "target": "file:code/C9/main.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+      "target": "config:code/C9/agent(代码系ai生成)/config.json",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+      "target": "document:code/C9/agent(代码系ai生成)/recipe_ontology_design.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:code/C9/agent(代码系ai生成)/recipe_ontology_design.md",
+      "target": "config:code/C9/agent(代码系ai生成)/config.json",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:code/C9/agent(代码系ai生成)/config.json",
+      "target": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:code/C9/agent(代码系ai生成)/config.json",
+      "target": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "document:code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+      "target": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+      "target": "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+      "target": "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+      "target": "file:code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:code/C9/agent(代码系ai生成)/recipe_ontology_design.md",
+      "target": "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "target": "class:code/C9/agent(代码系ai生成)/amount_normalizer.py:AmountNormalizer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "target": "function:code/C9/agent(代码系ai生成)/amount_normalizer.py:demo_normalization",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "target": "class:code/C9/agent(代码系ai生成)/amount_normalizer.py:AmountNormalizer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "target": "function:code/C9/agent(代码系ai生成)/amount_normalizer.py:demo_normalization",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_indexing.py",
+      "target": "class:code/C9/rag_modules/graph_indexing.py:EntityKeyValue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_indexing.py",
+      "target": "class:code/C9/rag_modules/graph_indexing.py:RelationKeyValue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_indexing.py",
+      "target": "class:code/C9/rag_modules/graph_indexing.py:GraphIndexingModule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_indexing.py",
+      "target": "class:code/C9/rag_modules/graph_indexing.py:EntityKeyValue",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_indexing.py",
+      "target": "class:code/C9/rag_modules/graph_indexing.py:RelationKeyValue",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/graph_indexing.py",
+      "target": "class:code/C9/rag_modules/graph_indexing.py:GraphIndexingModule",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "target": "class:code/C9/rag_modules/hybrid_retrieval.py:RetrievalResult",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "target": "class:code/C9/rag_modules/hybrid_retrieval.py:HybridRetrievalModule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "target": "class:code/C9/rag_modules/hybrid_retrieval.py:RetrievalResult",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "target": "class:code/C9/rag_modules/hybrid_retrieval.py:HybridRetrievalModule",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "target": "file:code/C9/rag_modules/graph_indexing.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:code/C9/rag_modules/hybrid_retrieval.py",
+      "target": "class:code/C9/rag_modules/graph_indexing.py:GraphIndexingModule",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "service:data/C9/docker-compose.yml",
+      "target": "file:data/C9/cypher/neo4j_import.cypher",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "service:data/C9/docker-compose.yml",
+      "target": "table:data/C9/cypher/nodes.csv",
+      "type": "provisions",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "service:data/C9/docker-compose.yml",
+      "target": "table:data/C9/cypher/relationships.csv",
+      "type": "provisions",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:data/C9/cypher/neo4j_import.cypher",
+      "target": "table:data/C9/cypher/nodes.csv",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:data/C9/cypher/neo4j_import.cypher",
+      "target": "table:data/C9/cypher/relationships.csv",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "config:code/C9/agent(代码系ai生成)/config.json",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "service:code/C9/docker-compose.yml",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "config:code/C9/.env.example",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "service:data/C9/docker-compose.yml",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "table:data/C9/cypher/nodes.csv",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:CLAUDE.md",
+      "target": "table:data/C9/cypher/relationships.csv",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:api",
+      "name": "API 层",
+      "description": "基于 FastAPI 的 REST Web 服务端点，提供健康检查、烹饪知识问答（流式与非流式）、系统统计查询、知识库重建及菜谱文件上传等 HTTP 接口，作为 C9 系统的外部服务入口。",
+      "nodeIds": [
+        "file:code/C9/api_server.py"
+      ]
+    },
+    {
+      "id": "layer:service",
+      "name": "服务层",
+      "description": "C9 烹饪 RAG 系统的核心业务逻辑层，包含系统配置管理、图数据准备、Milvus 向量索引构建、图键值索引、混合检索（BM25+向量）、图 RAG 多跳检索、智能查询路由及 LLM 答案生成等全部检索与生成子系统，由 AdvancedGraphRAGSystem 统一编排调度。",
+      "nodeIds": [
+        "file:code/C9/main.py",
+        "file:code/C9/config.py",
+        "file:code/C9/rag_modules/__init__.py",
+        "file:code/C9/rag_modules/graph_rag_retrieval.py",
+        "file:code/C9/rag_modules/intelligent_query_router.py",
+        "file:code/C9/rag_modules/generation_integration.py",
+        "file:code/C9/rag_modules/graph_data_preparation.py",
+        "file:code/C9/rag_modules/milvus_index_construction.py",
+        "file:code/C9/rag_modules/graph_indexing.py",
+        "file:code/C9/rag_modules/hybrid_retrieval.py"
+      ]
+    },
+    {
+      "id": "layer:recipe-parsing",
+      "name": "菜谱解析层",
+      "description": "基于 Kimi LLM 的智能菜谱知识图谱构建管道，包含菜谱信息抽取代理、知识图谱构建器、用量标准化工具及批处理/增量更新管理入口，负责将 Markdown 菜谱解析为结构化数据并导出为 Neo4j CSV 或 RF2 知识图谱格式。",
+      "nodeIds": [
+        "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+        "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+        "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+        "file:code/C9/agent(代码系ai生成)/amount_normalizer.py"
+      ]
+    },
+    {
+      "id": "layer:ui",
+      "name": "前端 UI 层",
+      "description": "C9 系统的 Web 前端界面，包含产品营销落地页（展示技术架构与快速启动引导）和 SPA 聊天问答应用（提供菜谱上传、问答交互和知识库管理功能），采用 Tailwind CSS 构建现代中式风格 UI。",
+      "nodeIds": [
+        "file:code/C9/landing-page/app.html",
+        "file:code/C9/landing-page/index.html"
+      ]
+    },
+    {
+      "id": "layer:data",
+      "name": "数据层",
+      "description": "烹饪知识图谱的数据持久层，包含 Neo4j Cypher 导入脚本（含约束索引、APOC 动态节点创建、分类体系构建）以及 Recipe/Ingredient/CookingStep 等核心知识图谱节点与关系的 CSV 数据文件，由菜谱解析管道生成并被 Neo4j 初始化服务自动加载。",
+      "nodeIds": [
+        "file:data/C9/cypher/neo4j_import.cypher",
+        "table:data/C9/cypher/nodes.csv",
+        "table:data/C9/cypher/relationships.csv"
+      ]
+    },
+    {
+      "id": "layer:infrastructure",
+      "name": "基础设施层",
+      "description": "C9 系统的容器化部署基础设施，包含 Milvus 向量数据库（及依赖的 etcd 元数据协调服务与 MinIO S3 对象存储）和 Neo4j 图数据库（含 APOC 插件与自动初始化容器）的 Docker Compose 编排定义，为 RAG 检索和知识图谱存储提供运行环境。",
+      "nodeIds": [
+        "service:code/C9/docker-compose.yml",
+        "service:code/C9/docker-compose.yml:etcd",
+        "service:code/C9/docker-compose.yml:minio",
+        "service:code/C9/docker-compose.yml:standalone",
+        "service:data/C9/docker-compose.yml"
+      ]
+    },
+    {
+      "id": "layer:config",
+      "name": "配置层",
+      "description": "项目级配置管理，包含 MCP 服务器注册（codegraph 代码智能工具）、IDE 编辑器集成、环境变量模板（API 密钥与数据库连接参数）、AI 菜谱解析系统配置（API 设置、分类编码映射）、Python 依赖清单以及代码分析工具配置与忽略规则。",
+      "nodeIds": [
+        "config:.mcp.json",
+        "config:opencode.jsonc",
+        "config:code/C9/.env.example",
+        "config:code/C9/agent(代码系ai生成)/config.json",
+        "config:.cursor/mcp.json",
+        "config:.understand-anything/config.json",
+        "file:.understand-anything/.understandignore",
+        "document:code/C9/requirements.txt",
+        "document:code/C9/agent(代码系ai生成)/requirements.txt"
+      ]
+    },
+    {
+      "id": "layer:documentation",
+      "name": "文档层",
+      "description": "C9 项目的技术文档体系，涵盖项目概述、仓库结构、系统架构、数据流和检索策略的综合性技术参考文档（CLAUDE.md），AI 菜谱知识图谱生成器的完整使用指南（45 章），以及烹饪知识图谱本体设计方案（概念层级、分类体系、关系类型、RF2 格式和应用场景）。",
+      "nodeIds": [
+        "document:CLAUDE.md",
+        "document:code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+        "document:code/C9/agent(代码系ai生成)/recipe_ontology_design.md"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "项目概览",
+      "description": "从 CLAUDE.md 技术文档入手，理解 C9（尝尝咸淡）项目的全貌：这是一个基于知识图谱的中文烹饪 RAG 系统，它将 Markdown 菜谱解析为 Neo4j 知识图谱，然后通过双引擎检索（向量搜索 + 图遍历）配合 LLM 回答烹饪问题。该文档涵盖项目结构、基础设施依赖、系统架构和 Neo4j 图数据库模式，为后续深入代码细节提供了清晰的导航地图。",
+      "nodeIds": [
+        "document:CLAUDE.md"
+      ]
+    },
+    {
+      "order": 2,
+      "title": "系统编排入口",
+      "description": "main.py 是 C9 系统的核心编排器，它按顺序加载数据准备、向量索引构建、混合检索、图 RAG 检索和智能查询路由等所有子系统，并提供交互式命令行界面。它依赖 config.py 中定义的 GraphRAGConfig 数据类来集中管理 Neo4j、Milvus、嵌入模型和 LLM 的所有连接参数——这体现了将配置与逻辑分离的清晰架构设计。理解这两个文件就能把握整个 RAG 系统的初始化流程和参数体系。",
+      "nodeIds": [
+        "file:code/C9/main.py",
+        "file:code/C9/config.py"
+      ],
+      "languageLesson": "Python dataclass 通过 @dataclass 装饰器自动生成 __init__、__repr__ 等方法，配合类属性（field）可以声明默认值和字段元数据（如 metadata），非常适合作为类型安全的配置容器，避免字典键名拼写错误。"
+    },
+    {
+      "order": 3,
+      "title": "菜谱知识图谱构建 -- AI 解析引擎",
+      "description": "这一站进入系统的数据输入端。recipe_ai_agent.py 是菜谱知识图谱构建的核心，它定义了 RecipeInfo、IngredientInfo 等数据结构，封装了基于 Kimi LLM 的 KimiRecipeAgent（负责从 Markdown 菜谱中抽取结构化信息）和 RecipeKnowledgeGraphBuilder（负责批处理、增量更新、导出 Neo4j CSV 和 RF2 格式）。run_ai_agent.py 则是对外暴露的命令行入口，支持测试单菜谱、批量处理和增量处理三种模式。AI_AGENT_README.md 提供了完整的使用文档，覆盖 45 个章节的配置和故障排除指南。",
+      "nodeIds": [
+        "file:code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+        "file:code/C9/agent(代码系ai生成)/run_ai_agent.py",
+        "document:code/C9/agent(代码系ai生成)/AI_AGENT_README.md"
+      ],
+      "languageLesson": "Python dataclass 结合 @dataclass_json 可以在类型安全和 JSON 序列化之间取得平衡：KimiRecipeAgent 通过 LLM 的 Function Calling / JSON Mode 输出结构化数据，直接反序列化为 Python 对象，避免了手写解析逻辑。这种方式在 RAG 系统的数据摄取管道中非常常见。"
+    },
+    {
+      "order": 4,
+      "title": "菜谱知识图谱构建 -- 本体设计与批量管理",
+      "description": "recipe_ontology_design.md 定义了知识图谱的本体（Ontology）方案，是数据模型的理论基础——它规定了 9 大顶级概念、4 套分类编码体系、6 种核心关系类型，以及最终如何映射到 Neo4j 图结构，这正是下一站导入脚本的依据。batch_manager.py 提供了批处理进度管理、增量更新、批次合并等命令行工具，让大规模菜谱处理可控可追踪。amount_normalizer.py 解决了中餐菜谱中 \"适量\"\"少许\" 等模糊用量的标准化问题，config.json 则定义了 9 种菜谱分类编码和 5 级难度编码映射。",
+      "nodeIds": [
+        "document:code/C9/agent(代码系ai生成)/recipe_ontology_design.md",
+        "file:code/C9/agent(代码系ai生成)/batch_manager.py",
+        "file:code/C9/agent(代码系ai生成)/amount_normalizer.py",
+        "config:code/C9/agent(代码系ai生成)/config.json"
+      ]
+    },
+    {
+      "order": 5,
+      "title": "RAG 模块入口与知识图谱数据准备",
+      "description": "现在进入系统的查询管道。rag_modules/__init__.py 是 RAG 模块包的 barrel 文件，通过 __all__ 统一导出四个核心模块类，供 main.py 按需引用。graph_data_preparation.py 负责从 Neo4j 加载菜谱知识图谱数据（Recipe、Ingredient、CookingStep 节点及它们之间的 REQUIRES、CONTAINS_STEP 等关系），将其转换为 LangChain Document 格式并按章节分块——这是从图数据库到向量检索的桥梁，后续的向量化和检索都建立在这些 Document 之上。",
+      "nodeIds": [
+        "file:code/C9/rag_modules/__init__.py",
+        "file:code/C9/rag_modules/graph_data_preparation.py"
+      ],
+      "languageLesson": "Python 的 __init__.py 配合 __all__ 列表可以实现包的显式公开 API（public API），明确告知使用者哪些类是模块的对外接口。这在大型项目中避免了 `import *` 的命名空间污染，也让 IDE 自动补全更加精准。"
+    },
+    {
+      "order": 6,
+      "title": "向量索引构建",
+      "description": "mivus_index_construction.py 是向量检索引擎的核心。它将上一步准备好的 LangChain Document 通过 BAAI/bge-small-zh-v1.5 嵌入模型（512 维，中文优化）向量化后存入 Milvus，构建 HNSW 索引并采用 COSINE 相似度度量。该模块还负责增量文档添加和集合生命周期管理。Milvus 是 C9 双引擎检索中 '向量引擎' 的承载者，提供了语义相似度搜索能力——例如用户问 '红烧肉怎么做' 时，即使菜谱中写的是 '毛氏红烧肉'，向量搜索也能匹配到。",
+      "nodeIds": [
+        "file:code/C9/rag_modules/milvus_index_construction.py"
+      ],
+      "languageLesson": "HNSW（Hierarchical Navigable Small World）是一种近似最近邻搜索算法，通过在多层图中构建可导航边来实现亚线性的搜索时间。Milvus 的 HNSW 索引需设置 M（每层最大连接数，默认 16）和 efConstruction（构建时的搜索宽度），前者影响内存占用，后者影响构建质量。COSINE 相似度适合文本嵌入，因为向量方向比幅度更有语义意义。"
+    },
+    {
+      "order": 7,
+      "title": "图索引与混合检索",
+      "description": "graph_indexing.py 和 hybrid_retrieval.py 构成了 C9 的第一个检索策略——传统混合检索。graph_indexing.py 为 Neo4j 中的烹饪实体和关系构建键值倒排索引，支持 LLM 增强的关系键扩展，让检索能够理解 '糖醋里脊' 和 '糖醋' 之间的烹饪技法关联。hybrid_retrieval.py 在此基础上实现了实体级和主题级双层检索，结合 Milvus 向量搜索、BM25 关键词匹配和 Neo4j 图邻居扩展，通过轮询轮转算法（round-robin）公平融合多种来源的结果。这种多策略融合避免了单一检索方式的盲区。",
+      "nodeIds": [
+        "file:code/C9/rag_modules/graph_indexing.py",
+        "file:code/C9/rag_modules/hybrid_retrieval.py"
+      ],
+      "languageLesson": "BM25（Best Matching 25）是一种基于词频-逆文档频率（TF-IDF）改进的关键词检索算法，它不像向量搜索那样依赖语义相似度，而是直接匹配用户查询中的关键词。在中文烹饪场景中，BM25 能精确匹配 '生抽' '老抽' 等不可替代的调料名称，而向量搜索适合 '炖煮' 与 '焖烧' 等语义相近的概念。两者互补形成了完整的检索覆盖。"
+    },
+    {
+      "order": 8,
+      "title": "图 RAG 检索与智能查询路由",
+      "description": "这是 C9 系统最核心的智能层。graph_rag_retrieval.py 实现了基于 Neo4j 的原生图 RAG 检索——支持多跳路径遍历（如 '番茄炒蛋 → 鸡蛋 → 其他含鸡蛋的菜谱'）、知识子图抽取和图结构推理链构建，能够回答 '哪些素菜适合夏天吃且不辣？' 这类需要复杂关系推理的问题。intelligent_query_router.py 是这一切的指挥官：它通过 LLM 语义分析评估用户查询的复杂度、关系强度和推理需求，自动在三种策略中选择——传统混合检索（简单查询）、图 RAG 检索（关系推理查询）和组合检索（复杂查询），并返回置信度评分。",
+      "nodeIds": [
+        "file:code/C9/rag_modules/graph_rag_retrieval.py",
+        "file:code/C9/rag_modules/intelligent_query_router.py"
+      ],
+      "languageLesson": "图 RAG（Graph RAG）与传统 RAG 的核心区别在于：传统 RAG 将知识图谱展平为文档块后进行向量检索，丢失了实体之间的拓扑关系；而 Graph RAG 直接在图上进行遍历——例如 Cypher 查询 MATCH (r:Recipe)-[:REQUIRES]->(i:Ingredient) WHERE i.name='鸡蛋' RETURN r——保留了实体间的路径信息，支持跨越多跳的推理。这是知识图谱在 RAG 中的独特价值。"
+    },
+    {
+      "order": 9,
+      "title": "答案生成",
+      "description": "generation_integration.py 是检索管道与用户之间的最终桥梁。它基于 OpenAI 兼容 API 调用 Kimi/Moonshot LLM，将前序检索模块返回的文档片段作为上下文，结合用户问题构造提示词（prompt），生成自然语言答案。支持标准生成和带重试机制的流式生成（SSE）两种模式——流式生成让用户看到逐字输出的效果，减少等待感。重试机制处理 API 限流或网络抖动，提高系统鲁棒性。",
+      "nodeIds": [
+        "file:code/C9/rag_modules/generation_integration.py"
+      ],
+      "languageLesson": "流式生成（Streaming Generation）通过 Server-Sent Events（SSE）协议逐 token 返回 LLM 输出，用户无需等待完整回答即可开始阅读。在 OpenAI 兼容 API 中设置 stream=True 即可启用，然后迭代 response 对象的 chunk。流式模式的挑战在于：如果中途出错，已输出的部分无法撤回，因此需要评估是否需要等完整生成后再展示（如代码生成场景）。"
+    },
+    {
+      "order": 10,
+      "title": "Web API 服务",
+      "description": "api_server.py 将整个 RAG 系统封装为基于 FastAPI 的 REST Web 服务，使其可以被前端或第三方调用。它提供 /health（健康检查）、/chat（流式/非流式问答）、/stats（系统统计）、/rebuild（知识库重建）和 /upload（菜谱上传）等端点，通过 FastAPI 的 lifespan 机制在应用生命周期中管理 RAG 系统的初始化与清理。这是将 Python 后端能力暴露为网络服务的标准实践，前端 app.html 正是通过这里的接口进行交互。",
+      "nodeIds": [
+        "file:code/C9/api_server.py"
+      ],
+      "languageLesson": "FastAPI 的 lifespan 上下文管理器（通过 @asynccontextmanager 装饰的 async generator）替代了传统的 @app.on_event 装饰器，在应用启动时执行初始化（如加载模型、连接数据库），在关闭时执行清理。这比全局变量加 on_event 的方式更安全，因为它保证了资源在 yield 之前已准备就绪。"
+    },
+    {
+      "order": 11,
+      "title": "Web 前端交互界面",
+      "description": "前端由两个 HTML 页面组成。index.html 是产品营销落地页（398 行），采用玻璃拟态（glassmorphism）设计风格，展示产品特性亮点、三步使用流程和技术架构。app.html 是 SPA 主应用页面（790 行），通过 Tailwind CSS 构建中式风格的现代 UI，对接 api_server.py 的 REST 接口实现完整的聊天问答、菜谱文件上传、知识库重建和实时统计面板功能。这两个页面共同构成了 C9 系统从 '了解产品' 到 '使用产品' 的用户旅程。",
+      "nodeIds": [
+        "file:code/C9/landing-page/index.html",
+        "file:code/C9/landing-page/app.html"
+      ]
+    },
+    {
+      "order": 12,
+      "title": "数据库架构与知识图谱导入",
+      "description": "这一站下沉到数据持久化层。nodes.csv（5761 行）和 relationships.csv（6056 行）是由菜谱解析管道产出的知识图谱数据文件，分别包含 Recipe、Ingredient、CookingStep 等节点和 REQUIRES、CONTAINS_STEP、BELONGS_TO_CATEGORY 等关系。neo4j_import.cypher（368 行）是通过 LOAD CSV 导入这些数据的 Cypher 脚本，它创建约束索引、利用 APOC 动态创建节点、构建分类层次体系、优化计算属性，最终生成统计信息。这三者与第 3-4 步的菜谱解析管道形成完整的 'Markdown → 结构化数据 → 图数据库' 链路。",
+      "nodeIds": [
+        "table:data/C9/cypher/nodes.csv",
+        "table:data/C9/cypher/relationships.csv",
+        "file:data/C9/cypher/neo4j_import.cypher"
+      ],
+      "languageLesson": "Cypher 的 LOAD CSV 是 Neo4j 批量导入的标准方式。相比逐条 INSERT，LOAD CSV 一次性读取整个 CSV 文件到内存，再通过 CREATE 或 MERGE 语句批量创建节点和关系，性能可提升数十倍。配合约束（CONSTRAINT）和索引（INDEX）在导入前创建，可以确保数据唯一性并加速关系匹配。APOC 插件提供了 CALL apoc.create.node 等动态创建节点的能力，弥补了纯 Cypher 在动态标签场景下的不足。"
+    },
+    {
+      "order": 13,
+      "title": "基础设施与部署",
+      "description": "C9 系统依赖两个 Docker Compose 编排来运行。code/C9/docker-compose.yml 部署 Milvus 向量数据库及其依赖服务——etcd（元数据协调）和 MinIO（对象存储），三者通过内部网络协作，Milvus 暴露 19530 端口供 Python 客户端连接。data/C9/docker-compose.yml 部署 Neo4j 5.18 图数据库（含 APOC 插件）和一个自动执行 neo4j_import.cypher 的初始化容器，启动后即完成知识图谱的自动导入。.env.example 定义了 Moonshot API 密钥和数据库连接参数，是整个系统的运行时配置入口。这三者构成了 C9 从零启动所需的全部基础设施。",
+      "nodeIds": [
+        "service:code/C9/docker-compose.yml",
+        "service:data/C9/docker-compose.yml",
+        "config:code/C9/.env.example"
+      ],
+      "languageLesson": "Docker Compose 的 depends_on 仅控制启动顺序，不保证服务就绪。因此 Neo4j 的初始化容器使用 wait-for-it 或 healthcheck 轮询来等待数据库完全启动后再执行 Cypher 脚本。Milvus Standalone 依赖 etcd（元数据）和 MinIO（对象存储），这是分布式向量数据库的经典三层架构——计算（Milvus）与存储（MinIO）分离，通过 etcd 协调状态。"
+    }
+  ]
+}

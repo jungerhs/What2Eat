@@ -308,23 +308,42 @@ tailwind.config = {
       </div>
 
       <!-- Upload recipe -->
-      <div class="rounded-2xl p-4 bg-white/40 flex-1">
-        <h3 class="text-sm font-semibold text-warm-800/80 mb-3 flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-          上传食谱
-        </h3>
-        <label id="upload-label" for="file-upload"
-          class="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-warm-800/15 rounded-xl cursor-pointer hover:border-brand-400/50 hover:bg-brand-50/30 transition-colors duration-200 text-center">
-          <svg class="w-6 h-6 text-warm-800/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-          <span id="upload-hint" class="text-xs text-warm-800/50">点击选择 .md / .pdf / .txt</span>
-          <input id="file-upload" type="file" accept=".md,.markdown,.pdf,.txt" class="hidden" onchange="handleFileSelect(event)">
-        </label>
-        <div id="upload-status" class="hidden mt-2 text-xs text-center"></div>
+      <div class="space-y-2">
+        <div class="glass rounded-2xl p-4">
+          <h3 class="text-sm font-semibold text-warm-800/80 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            上传食谱
+          </h3>
+          <label id="upload-label" for="file-upload"
+            class="flex flex-col items-center gap-1.5 p-3 border-2 border-dashed border-warm-800/15 rounded-xl cursor-pointer hover:border-brand-400/50 hover:bg-brand-50/30 transition-colors duration-200 text-center">
+            <svg class="w-5 h-5 text-warm-800/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+            <span id="upload-hint" class="text-xs text-warm-800/50">选择 .md / .pdf / .txt</span>
+            <input id="file-upload" type="file" accept=".md,.markdown,.pdf,.txt" class="hidden" onchange="handleFileSelect(event)">
+          </label>
+          <div id="upload-status" class="hidden mt-2 text-xs text-center"></div>
+        </div>
+
+        <!-- File list -->
+        <div id="file-list-container" class="glass rounded-2xl p-3 hidden">
+          <div id="file-list" class="space-y-1.5 max-h-32 overflow-y-auto text-xs"></div>
+        </div>
+
+        <!-- Process button + progress -->
+        <button id="process-files-btn" onclick="processUploadedFiles()"
+          class="w-full py-2 glass rounded-xl text-xs font-medium text-brand-500 hover:text-brand-600 hover:bg-white/60 transition-colors duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" touch-action="manipulation">
+          处理全部食谱
+        </button>
+        <div id="process-progress" class="hidden">
+          <div class="h-1.5 rounded-full bg-warm-800/10 overflow-hidden">
+            <div id="process-progress-bar" class="h-full rounded-full bg-brand-400 transition-all duration-500" style="width:0%"></div>
+          </div>
+          <div id="process-progress-text" class="text-xs text-warm-800/50 mt-1 text-center"></div>
+        </div>
       </div>
 
       <!-- Rebuild (aligned with input area) -->
       <button id="rebuild-btn" onclick="handleRebuild()"
-        class="w-full py-2.5 rounded-xl text-sm font-medium text-warm-800/60 hover:text-brand-600 hover:bg-white/60 transition-colors duration-200 cursor-pointer shrink-0 bg-white/40" touch-action="manipulation">
+        class="w-full py-2.5 glass-strong rounded-xl text-sm font-medium text-warm-800/60 hover:text-brand-600 hover:bg-white/80 transition-colors duration-200 cursor-pointer shrink-0" touch-action="manipulation">
         重建知识库
       </button>
     </aside>
@@ -343,6 +362,8 @@ const state = {
   isStreaming: false,
   connectionStatus: 'connecting',
   rebuildConfirm: false,
+  uploadedFiles: [],
+  isProcessing: false,
 };
 
 // ═══════════════ Utilities ═══════════════
@@ -724,7 +745,13 @@ async function handleFileSelect(event) {
     if (res.ok && data.status === 'ok') {
       status.textContent = `"${file.name}" 上传成功`;
       status.className = 'mt-2 text-xs text-center text-emerald-500 font-medium';
-      hint.textContent = '点击选择 .md / .pdf / .txt';
+      hint.textContent = '选择 .md / .pdf / .txt';
+
+      // Track uploaded file
+      if (!state.uploadedFiles.includes(file.name)) {
+        state.uploadedFiles.push(file.name);
+        updateFileList();
+      }
       showToast('食谱上传成功', 'success');
     } else {
       const msg = data.detail?.message || data.message || '上传失败';
@@ -739,6 +766,124 @@ async function handleFileSelect(event) {
 
   // Reset file input
   event.target.value = '';
+}
+
+function updateFileList() {
+  const container = $('file-list-container');
+  const list = $('file-list');
+  const btn = $('process-files-btn');
+
+  if (state.uploadedFiles.length === 0) {
+    container.classList.add('hidden');
+    return;
+  }
+
+  container.classList.remove('hidden');
+  list.innerHTML = state.uploadedFiles.map(f => `
+    <div class="flex items-center justify-between py-1 px-2 rounded-lg hover:bg-white/30">
+      <span class="text-warm-800/70 truncate flex-1">${escapeHtml(f)}</span>
+      <button class="text-warm-800/30 hover:text-red-400 transition-colors cursor-pointer ml-1 shrink-0" onclick="removeFile('${escapeHtml(f)}')" aria-label="删除文件" touch-action="manipulation">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  `).join('');
+  btn.textContent = `处理全部食谱 (${state.uploadedFiles.length})`;
+}
+
+function removeFile(name) {
+  state.uploadedFiles = state.uploadedFiles.filter(f => f !== name);
+  updateFileList();
+}
+
+// ═══════════════ Recipe Processing ═══════════════
+async function processUploadedFiles() {
+  if (state.isProcessing || state.uploadedFiles.length === 0) return;
+
+  state.isProcessing = true;
+  const btn = $('process-files-btn');
+  const progressEl = $('process-progress');
+  const bar = $('process-progress-bar');
+  const text = $('process-progress-text');
+
+  btn.disabled = true;
+  btn.textContent = '处理中…';
+  progressEl.classList.remove('hidden');
+  bar.style.width = '0%';
+  text.textContent = '准备中…';
+
+  try {
+    const res = await fetch(`${API}/api/recipes/process`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filenames: state.uploadedFiles, skip_existing: false }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err.detail?.message || '处理请求失败';
+      text.textContent = msg;
+      text.className = 'text-xs text-red-500 mt-1 text-center';
+      showToast(msg, 'error');
+      return;
+    }
+
+    // Start polling for progress
+    bar.style.width = '10%';
+    text.textContent = '解析菜谱中…';
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const sr = await fetch(`${API}/api/recipes/process/status`);
+        const sd = await sr.json();
+        bar.style.width = `${sd.progress_pct}%`;
+
+        if (sd.stage === 'processing') {
+          text.textContent = sd.current_file ? `处理: ${sd.current_file}` : `处理中 ${sd.processed}/${sd.total_files}`;
+        } else if (sd.stage === 'indexing') {
+          text.textContent = '更新 RAG 索引中…';
+          bar.style.width = '95%';
+        } else if (sd.stage === 'done') {
+          bar.style.width = '100%';
+          text.textContent = '处理完成';
+          text.className = 'text-xs text-emerald-500 mt-1 text-center';
+          clearInterval(pollInterval);
+          state.uploadedFiles = [];
+          updateFileList();
+          fetchStats();
+          showToast('食谱处理完成', 'success');
+          // Hide progress after 3s
+          setTimeout(() => { progressEl.classList.add('hidden'); }, 3000);
+        } else if (sd.stage === 'error') {
+          text.textContent = '处理出错';
+          text.className = 'text-xs text-red-500 mt-1 text-center';
+          clearInterval(pollInterval);
+          showToast('食谱处理出错', 'error');
+        }
+      } catch {
+        // ignore poll errors
+      }
+    }, 2000);
+
+    // Stop polling after 5 minutes max
+    setTimeout(() => clearInterval(pollInterval), 300000);
+
+    // Get final result
+    const data = await res.json();
+    if (data.status === 'ok' || data.status === 'partial') {
+      text.textContent = `${data.succeeded} 成功, ${data.skipped} 跳过`;
+      text.className = 'text-xs text-emerald-500 mt-1 text-center';
+    }
+  } catch {
+    text.textContent = '网络错误';
+    text.className = 'text-xs text-red-500 mt-1 text-center';
+    showToast('网络错误，处理失败', 'error');
+  } finally {
+    state.isProcessing = false;
+    btn.disabled = false;
+    btn.textContent = state.uploadedFiles.length > 0
+      ? `处理全部食谱 (${state.uploadedFiles.length})`
+      : '处理全部食谱';
+  }
 }
 
 // ═══════════════ Rebuild ═══════════════

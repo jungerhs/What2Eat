@@ -47,7 +47,7 @@ services:
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
     volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
+      - milvus_data:/var/lib/milvus
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
       interval: 30s
@@ -60,6 +60,9 @@ services:
     depends_on:
       - "etcd"
       - "minio"
+
+volumes:
+  milvus_data:
 
 networks:
   default:

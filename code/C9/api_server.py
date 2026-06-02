@@ -10,7 +10,7 @@ import json
 import io
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone
 
 # ── 修复 Windows GBK 编码问题 ──
@@ -117,6 +117,32 @@ class UploadResponse(BaseModel):
     saved_path: str = ""
 
 
+class RecipeProcessRequest(BaseModel):
+    filenames: List[str] = Field(..., min_length=1, max_length=50,
+                                  description="要处理的文件列表 (uploads/ 目录下)")
+    skip_existing: bool = Field(default=True, description="跳过 Neo4j 中已存在的同名菜谱")
+
+
+class RecipeProcessResponse(BaseModel):
+    status: str  # "ok" | "partial" | "error"
+    message: str
+    total: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    skipped: int = 0
+    new_recipe_ids: List[str] = []
+    errors: List[dict] = []
+
+
+class ProcessStatusResponse(BaseModel):
+    stage: str  # "idle" | "processing" | "done" | "error"
+    progress_pct: float = 0.0
+    current_file: str = ""
+    total_files: int = 0
+    processed: int = 0
+    errors: List[dict] = []
+
+
 class ErrorResponse(BaseModel):
     error: str
     message: str
@@ -128,6 +154,16 @@ class ErrorResponse(BaseModel):
 
 rag_system: Optional[AdvancedGraphRAGSystem] = None
 query_lock = asyncio.Lock()
+
+# Recipe processing state (module-level, shared across requests)
+_process_status: dict = {
+    "stage": "idle",
+    "progress_pct": 0.0,
+    "current_file": "",
+    "total_files": 0,
+    "processed": 0,
+    "errors": [],
+}
 
 
 def _make_analysis_response(analysis) -> QueryAnalysisResponse:
@@ -441,6 +477,259 @@ async def upload_recipe(file: UploadFile = File(...)):
         filename=file.filename,
         saved_path=save_path,
     )
+
+
+# ═══════════════════════════════════════════
+# Agent Lazy Init (for recipe parsing)
+# ═══════════════════════════════════════════
+
+_agent_instance = None
+_agent_builder = None
+
+def _get_agent():
+    """懒初始化 KimiRecipeAgent + RecipeKnowledgeGraphBuilder"""
+    global _agent_instance, _agent_builder
+
+    if _agent_instance is None:
+        agent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "agent(代码系ai生成)")
+        if agent_dir not in sys.path:
+            sys.path.insert(0, agent_dir)
+
+        import recipe_ai_agent
+        import json as _json
+
+        # 加载 agent 配置
+        config_path = os.path.join(agent_dir, "config.json")
+        agent_config = {}
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                agent_config = _json.load(f)
+
+        api_key = agent_config.get("kimi", {}).get("api_key", "")
+        base_url = agent_config.get("kimi", {}).get("base_url", "https://api.moonshot.cn/v1")
+        model = agent_config.get("kimi", {}).get("model", "kimi-k2-0711-preview")
+
+        # 如果 config.json 里还是占位符，从环境变量取
+        if not api_key or api_key == "sk-xxx" or api_key == "YOUR_KIMI_API_KEY_HERE":
+            api_key = os.getenv("MOONSHOT_API_KEY", "") or os.getenv("KIMI_API_KEY", "")
+
+        if not api_key:
+            logger.warning("Agent API key 未配置，菜谱解析功能不可用")
+
+        _agent_instance = recipe_ai_agent.KimiRecipeAgent(
+            api_key=api_key,
+            base_url=base_url,
+            model=model
+        )
+
+        # 用临时输出目录创建 builder（不持久化批次，直接用内存结果）
+        temp_output = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_output")
+        _agent_builder = recipe_ai_agent.RecipeKnowledgeGraphBuilder(
+            ai_agent=_agent_instance,
+            output_dir=temp_output,
+        )
+
+    return _agent_instance, _agent_builder
+
+
+# ═══════════════════════════════════════════
+# GET /api/recipes/process/status
+# ═══════════════════════════════════════════
+
+@app.get("/api/recipes/process/status", response_model=ProcessStatusResponse)
+async def get_process_status():
+    return ProcessStatusResponse(
+        stage=_process_status["stage"],
+        progress_pct=_process_status["progress_pct"],
+        current_file=_process_status["current_file"],
+        total_files=_process_status["total_files"],
+        processed=_process_status["processed"],
+        errors=_process_status["errors"],
+    )
+
+
+# ═══════════════════════════════════════════
+# POST /api/recipes/process
+# ═══════════════════════════════════════════
+
+@app.post("/api/recipes/process", response_model=RecipeProcessResponse)
+async def process_uploaded_recipes(request: RecipeProcessRequest):
+    """
+    处理上传的 .md 食谱文件：
+    1. AI Agent 解析 → concepts + relationships
+    2. Neo4j 直连导入
+    3. RAG 增量索引
+    """
+    global _process_status
+
+    if _process_status["stage"] == "processing":
+        raise HTTPException(status_code=409, detail={"error": "already_processing", "message": "已有处理任务在运行"})
+
+    _check_system_ready()
+
+    # 初始化状态
+    _process_status = {
+        "stage": "processing",
+        "progress_pct": 0.0,
+        "current_file": "",
+        "total_files": len(request.filenames),
+        "processed": 0,
+        "errors": [],
+    }
+
+    succeeded = 0
+    failed = 0
+    skipped = 0
+    all_new_recipe_ids = []
+    errors = []
+
+    try:
+        agent, builder = _get_agent()
+
+        if agent is None or not agent.api_key:
+            _process_status["stage"] = "error"
+            return RecipeProcessResponse(
+                status="error", message="Agent API key 未配置",
+                total=len(request.filenames), errors=[{"error": "no_api_key"}],
+            )
+
+        from recipe_import import RecipeNeo4jImporter
+
+        cfg = rag_system.config
+
+        for i, filename in enumerate(request.filenames):
+            _process_status["current_file"] = filename
+            _process_status["processed"] = i
+            _process_status["progress_pct"] = round(i / len(request.filenames) * 100, 1)
+
+            file_path = os.path.join(UPLOAD_DIR, filename)
+            if not os.path.exists(file_path):
+                errors.append({"filename": filename, "error": "文件不存在"})
+                failed += 1
+                continue
+
+            try:
+                t_start = time.time()
+                logger.info(f"[{i+1}/{len(request.filenames)}] 开始处理: {filename}")
+
+                # 1. 读取文件内容
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                logger.debug(f"  读取文件: {len(content)} 字符")
+
+                # 2. Agent 解析
+                logger.info(f"  Agent 解析中...")
+                t_agent = time.time()
+                recipe_info = agent.extract_recipe_info(content, filename)
+                logger.info(f"  Agent 解析完成 ({time.time()-t_agent:.1f}s): "
+                            f"name={recipe_info.name}, category={recipe_info.category}, "
+                            f"ingredients={len(recipe_info.ingredients)}, steps={len(recipe_info.steps)}")
+
+                # 2b. AI 返回空结果时，使用规则回退解析
+                if len(recipe_info.ingredients) == 0 or len(recipe_info.steps) == 0:
+                    logger.warning(f"  AI 返回空数据 (ingredients={len(recipe_info.ingredients)}, "
+                                   f"steps={len(recipe_info.steps)}), 尝试规则回退解析...")
+                    fallback = agent._fallback_parse(content)
+                    if len(fallback.ingredients) > len(recipe_info.ingredients):
+                        recipe_info.ingredients = fallback.ingredients
+                        logger.info(f"  回退解析: 食材 {len(recipe_info.ingredients)} 个")
+                    if len(fallback.steps) > len(recipe_info.steps):
+                        recipe_info.steps = fallback.steps
+                        logger.info(f"  回退解析: 步骤 {len(recipe_info.steps)} 个")
+
+                # 3. 检查重名
+                exists = RecipeNeo4jImporter.recipe_exists(
+                    cfg.neo4j_uri, cfg.neo4j_user, cfg.neo4j_password, recipe_info.name, cfg.neo4j_database
+                )
+                if exists:
+                    if request.skip_existing:
+                        logger.info(f"  跳过已存在的菜谱: {recipe_info.name}")
+                        skipped += 1
+                        continue
+                    else:
+                        logger.info(f"  菜谱已存在，级联删除后重新导入: {recipe_info.name}")
+                        RecipeNeo4jImporter.delete_recipe_cascade(
+                            cfg.neo4j_uri, cfg.neo4j_user, cfg.neo4j_password, recipe_info.name, cfg.neo4j_database
+                        )
+
+                # 4. 使用 builder 生成 concepts + relationships
+                # 记录调用前的长度，精确截取本次 recipe 产生的数据
+                logger.info(f"  生成 concepts/relationships...")
+                prev_conc_len = len(builder.concepts)
+                prev_rel_len = len(builder.relationships)
+                result = builder.process_recipe(content, filename)
+                concepts = builder.concepts[prev_conc_len:]
+                relationships = builder.relationships[prev_rel_len:]
+                logger.info(f"  生成了 {len(concepts)} 个 concepts, {len(relationships)} 个 relationships "
+                            f"(recipe_id={result.get('concept_id', '?')})")
+                # 打印 concept 类型分布
+                ctype_counts = {}
+                for c in concepts:
+                    ctype_counts[c.get('concept_type', '?')] = ctype_counts.get(c.get('concept_type', '?'), 0) + 1
+                logger.debug(f"  concept 类型: {ctype_counts}")
+
+                # 5. 导入 Neo4j
+                logger.info(f"  导入 Neo4j...")
+                t_neo = time.time()
+                new_recipes, new_ings, new_steps = RecipeNeo4jImporter.import_recipe_data(
+                    cfg.neo4j_uri, cfg.neo4j_user, cfg.neo4j_password,
+                    concepts, relationships, cfg.neo4j_database,
+                )
+                logger.info(f"  Neo4j 导入完成 ({time.time()-t_neo:.1f}s): "
+                            f"新Recipe={len(new_recipes)}, 新Ingredient={len(new_ings)}, 新Step={len(new_steps)}")
+
+                if new_recipes:
+                    all_new_recipe_ids.extend(new_recipes)
+                    succeeded += 1
+                    logger.info(f"  ✅ {filename} 处理成功 (总耗时 {time.time()-t_start:.1f}s)")
+                else:
+                    skipped += 1  # MERGE 后发现已存在
+                    logger.info(f"  ⏭️ {filename} 已存在，跳过")
+
+            except Exception as e:
+                logger.error(f"处理文件 '{filename}' 失败: {e}")
+                errors.append({"filename": filename, "error": str(e)})
+                failed += 1
+
+        # 6. RAG 增量索引
+        logger.info(f"RAG 增量索引阶段: {len(all_new_recipe_ids)} 个新菜谱待索引")
+        _process_status["stage"] = "indexing"
+        _process_status["current_file"] = ""
+        _process_status["progress_pct"] = 95.0
+
+        if all_new_recipe_ids:
+            logger.info(f"  调用 incremental_update_recipes: {all_new_recipe_ids}")
+            async with query_lock:
+                t_rag = time.time()
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(
+                    None,
+                    rag_system.incremental_update_recipes,
+                    all_new_recipe_ids,
+                )
+                logger.info(f"  RAG 增量索引完成 ({time.time()-t_rag:.1f}s): {result}")
+        else:
+            logger.info(f"  没有新的 recipe，跳过索引更新")
+
+        _process_status["stage"] = "done"
+        _process_status["progress_pct"] = 100.0
+
+        return RecipeProcessResponse(
+            status="ok" if failed == 0 else "partial",
+            message=f"处理完成: {succeeded} 成功, {skipped} 跳过, {failed} 失败",
+            total=len(request.filenames),
+            succeeded=succeeded,
+            failed=failed,
+            skipped=skipped,
+            new_recipe_ids=all_new_recipe_ids,
+            errors=errors,
+        )
+    
+    except Exception as e:
+        logger.error(f"批量处理失败: {e}")
+        _process_status["stage"] = "error"
+        _process_status["errors"].append({"error": str(e)})
+        raise HTTPException(status_code=500, detail={"error": "process_failed", "message": str(e)})
 
 
 # ═══════════════════════════════════════════

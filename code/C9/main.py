@@ -64,7 +64,7 @@ class AdvancedGraphRAGSystem:
         
         try:
             # 1. 数据准备模块
-            print("初始化数据准备模块...")
+            logger.info("初始化数据准备模块...")
             self.data_module = GraphDataPreparationModule(
                 uri=self.config.neo4j_uri,
                 user=self.config.neo4j_user,
@@ -73,7 +73,7 @@ class AdvancedGraphRAGSystem:
             )
             
             # 2. 向量索引模块
-            print("初始化Milvus向量索引...")
+            logger.info("初始化Milvus向量索引...")
             self.index_module = MilvusIndexConstructionModule(
                 host=self.config.milvus_host,
                 port=self.config.milvus_port,
@@ -83,7 +83,7 @@ class AdvancedGraphRAGSystem:
             )
             
             # 3. 生成模块
-            print("初始化生成模块...")
+            logger.info("初始化生成模块...")
             self.generation_module = GenerationIntegrationModule(
                 model_name=self.config.llm_model,
                 temperature=self.config.temperature,
@@ -91,7 +91,7 @@ class AdvancedGraphRAGSystem:
             )
             
             # 4. 传统混合检索模块
-            print("初始化传统混合检索...")
+            logger.info("初始化传统混合检索...")
             self.traditional_retrieval = HybridRetrievalModule(
                 config=self.config,
                 milvus_module=self.index_module,
@@ -100,14 +100,14 @@ class AdvancedGraphRAGSystem:
             )
             
             # 5. 图RAG检索模块
-            print("初始化图RAG检索引擎...")
+            logger.info("初始化图RAG检索引擎...")
             self.graph_rag_retrieval = GraphRAGRetrieval(
                 config=self.config,
                 llm_client=self.generation_module.client
             )
             
             # 6. 智能查询路由器
-            print("初始化智能查询路由器...")
+            logger.info("初始化智能查询路由器...")
             self.query_router = IntelligentQueryRouter(
                 traditional_retrieval=self.traditional_retrieval,
                 graph_rag_retrieval=self.graph_rag_retrieval,
@@ -198,7 +198,106 @@ class AdvancedGraphRAGSystem:
         
         self.system_ready = True
         print("✅ 检索引擎初始化完成！")
-    
+
+    def incremental_update_recipes(self, recipe_node_ids: List[str],
+                                   new_ingredient_ids: List[str] = None,
+                                   new_step_ids: List[str] = None) -> dict:
+        """
+        增量添加菜谱到 RAG 系统，不重建现有索引。
+
+        Args:
+            recipe_node_ids: 新增的 Recipe nodeId 列表
+            new_ingredient_ids: 新增的 Ingredient nodeId 列表 (可选)
+            new_step_ids: 新增的 CookingStep nodeId 列表 (可选)
+
+        Returns:
+            处理统计 dict
+        """
+        if not recipe_node_ids:
+            return {"status": "skipped", "reason": "no new recipes"}
+
+        print(f"\n🔄 增量更新: {len(recipe_node_ids)} 个新菜谱...")
+        logger.info(f"=== 开始增量更新 {len(recipe_node_ids)} 个菜谱 ===")
+        logger.info(f"  recipe_node_ids: {recipe_node_ids}")
+
+        try:
+            # 1. 从 Neo4j 加载新菜谱数据
+            logger.info(f"  [1/6] 从 Neo4j 加载菜谱数据...")
+            loaded = self.data_module.load_recipes_by_ids(recipe_node_ids)
+            print(f"   📊 从 Neo4j 加载了 {len(loaded)} 个菜谱")
+            logger.info(f"  加载结果: {len(loaded)}/{len(recipe_node_ids)} 个菜谱")
+
+            if not loaded:
+                logger.warning("  没有加载到任何菜谱，跳过")
+                return {"status": "skipped", "reason": "no recipes found in Neo4j"}
+
+            # 2. 为新的 recipe 构建 document
+            logger.info(f"  [2/6] 构建菜谱文档...")
+            new_recipe_nodes = [n for n in self.data_module.recipes if n.node_id in set(loaded)]
+            prev_doc_count = len(self.data_module.documents)
+            self.data_module.build_recipe_documents()
+            new_doc_count = len(self.data_module.documents) - prev_doc_count
+            logger.info(f"  文档: {prev_doc_count} -> {len(self.data_module.documents)} (+{new_doc_count})")
+
+            # 3. 只分块新文档
+            logger.info(f"  [3/6] 分块新文档...")
+            new_doc_ids = {n.node_id for n in new_recipe_nodes}
+            new_docs = [d for d in self.data_module.documents if d.metadata.get("node_id") in new_doc_ids]
+            logger.info(f"  待分块文档: {len(new_docs)} (node_ids: {new_doc_ids})")
+            prev_chunk_count = len(self.data_module.chunks)
+            new_chunks = self.data_module.chunk_documents(
+                chunk_size=self.config.chunk_size,
+                chunk_overlap=self.config.chunk_overlap,
+                documents=new_docs,
+            )
+            logger.info(f"  文档块: {prev_chunk_count} -> {len(self.data_module.chunks)} (+{len(new_chunks)})")
+            print(f"   📝 新增 {len(new_chunks)} 个文档块")
+
+            # 4. 增量添加到 Milvus
+            logger.info(f"  [4/6] 更新 Milvus 向量索引...")
+            milvus_ok = True
+            if hasattr(self.index_module, 'collection_created') and self.index_module.collection_created:
+                logger.info(f"  增量添加 {len(new_chunks)} 个向量到 Milvus")
+                milvus_ok = self.index_module.add_documents(new_chunks)
+                if not milvus_ok:
+                    logger.error(
+                        f"  Milvus 增量添加失败！新菜谱的向量检索将不可用。"
+                        f"请手动调用 POST /api/rebuild 重建索引。"
+                    )
+                    print("   ⚠️ Milvus 增量添加失败，向量检索可能不完整，建议手动重建: POST /api/rebuild")
+            else:
+                logger.info("  集合未创建，全量构建向量索引")
+                milvus_ok = self.index_module.build_vector_index(self.data_module.chunks)
+
+            # 5. 增量更新图索引 (BM25 + 实体/关系 KV)
+            logger.info(f"  [5/6] 更新图索引 (实体KV + 关系KV + BM25)...")
+            self.traditional_retrieval.incremental_update(
+                new_recipe_ids=loaded,
+                new_ingredient_ids=new_ingredient_ids,
+                new_step_ids=new_step_ids,
+            )
+
+            # 6. 刷新 GraphRAG 缓存
+            logger.info(f"  [6/6] 刷新 GraphRAG 缓存...")
+            self.graph_rag_retrieval.refresh_cache()
+
+            print(f"   ✅ 增量更新完成: {len(loaded)} 菜谱, {len(new_chunks)} 块")
+
+            result = {
+                "status": "ok" if milvus_ok else "partial",
+                "recipes_loaded": len(loaded),
+                "chunks_added": len(new_chunks),
+                "total_chunks": len(self.data_module.chunks),
+                "milvus_ok": milvus_ok,
+            }
+            logger.info(f"=== 增量更新完成: {result} ===")
+            return result
+
+        except Exception as e:
+            logger.error(f"增量更新失败: {e}")
+            print(f"   ❌ 增量更新失败: {e}")
+            return {"status": "error", "message": str(e)}
+
     def _show_knowledge_base_stats(self):
         """显示知识库统计信息"""
         print(f"\n知识库统计:")

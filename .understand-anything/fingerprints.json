@@ -1,0 +1,1890 @@
+{
+  "version": "1.0.0",
+  "gitCommitHash": "a6057623f3b47e4da6c28892aa0f6b7691b92565",
+  "generatedAt": "2026-05-29T04:09:17.687Z",
+  "files": {
+    ".cursor/mcp.json": {
+      "filePath": ".cursor/mcp.json",
+      "contentHash": "4504e72d300d0d4c11e3d1cc200508b5134a46dd76aff7d16f7026152d7ad355",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    ".mcp.json": {
+      "filePath": ".mcp.json",
+      "contentHash": "09237a8c19625daeb677211c6ca9b38e01aa12eede0f4b5f2c26ed6ec7b449e6",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 13,
+      "hasStructuralAnalysis": true
+    },
+    ".understand-anything/.understandignore": {
+      "filePath": ".understand-anything/.understandignore",
+      "contentHash": "9b2b8aff48334410e00ccdc57861ec053c4c03c6cbe4acbf1b3f70ef86eec8c7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 39,
+      "hasStructuralAnalysis": false
+    },
+    ".understand-anything/config.json": {
+      "filePath": ".understand-anything/config.json",
+      "contentHash": "5d2ff006cff22c68edd4776249d562ea8c73915a61c6214eb85933865a9402e7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 4,
+      "hasStructuralAnalysis": true
+    },
+    "CLAUDE.md": {
+      "filePath": "CLAUDE.md",
+      "contentHash": "976ff811efdccf7c36d4cc1de78447dc41a400bd10ecb4110d0b8edc88ea7428",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 145,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/.env.example": {
+      "filePath": "code/C9/.env.example",
+      "contentHash": "925b3126b811835155a77b55f270311593549e23cf1b8fdb607ed67ee3724aa2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 20,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/agent(代码系ai生成)/AI_AGENT_README.md": {
+      "filePath": "code/C9/agent(代码系ai生成)/AI_AGENT_README.md",
+      "contentHash": "44abf3dfd51e4c1fa3cff57dccbd555cfd26e29639c7574d40b06aad79a082f3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 438,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/agent(代码系ai生成)/amount_normalizer.py": {
+      "filePath": "code/C9/agent(代码系ai生成)/amount_normalizer.py",
+      "contentHash": "40caa25b238013acb4189ce04550bd52f1f0a6f2ba764eae8a2ac3d15d701879",
+      "functions": [
+        {
+          "name": "demo_normalization",
+          "params": [],
+          "exported": true,
+          "lineCount": 16
+        }
+      ],
+      "classes": [
+        {
+          "name": "AmountNormalizer",
+          "methods": [
+            "__init__",
+            "normalize_amount",
+            "parse_amount_with_unit",
+            "get_comparable_value",
+            "format_for_display"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 192
+        }
+      ],
+      "imports": [
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Tuple",
+            "Optional"
+          ]
+        }
+      ],
+      "exports": [
+        "AmountNormalizer",
+        "demo_normalization"
+      ],
+      "totalLines": 222,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/agent(代码系ai生成)/batch_manager.py": {
+      "filePath": "code/C9/agent(代码系ai生成)/batch_manager.py",
+      "contentHash": "909b6851d0f0f2ab8ceb96d7445a6d231e96a006b9a15f94f09062a07d0c0058",
+      "functions": [
+        {
+          "name": "load_config",
+          "params": [],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "show_progress_status",
+          "params": [
+            "output_dir"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "clean_progress",
+          "params": [
+            "output_dir"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "clean_batches",
+          "params": [
+            "output_dir"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "merge_batches",
+          "params": [
+            "output_dir"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "continue_processing",
+          "params": [
+            "recipe_dir",
+            "output_dir"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "show_manifest",
+          "params": [
+            "output_dir"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "incremental_update",
+          "params": [
+            "recipe_dir",
+            "output_dir"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "show_batch_details",
+          "params": [
+            "output_dir",
+            "batch_num"
+          ],
+          "exported": true,
+          "lineCount": 47
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 82
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "recipe_ai_agent",
+          "specifiers": [
+            "KimiRecipeAgent",
+            "RecipeKnowledgeGraphBuilder"
+          ]
+        }
+      ],
+      "exports": [
+        "load_config",
+        "show_progress_status",
+        "clean_progress",
+        "clean_batches",
+        "merge_batches",
+        "continue_processing",
+        "show_manifest",
+        "incremental_update",
+        "show_batch_details",
+        "main"
+      ],
+      "totalLines": 339,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/agent(代码系ai生成)/config.json": {
+      "filePath": "code/C9/agent(代码系ai生成)/config.json",
+      "contentHash": "4dd60405cbe19940af6de7c66db887b045d7d597fd19a7735b7d1e2c4ede766a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 39,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/agent(代码系ai生成)/recipe_ai_agent.py": {
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ai_agent.py",
+      "contentHash": "aede542f63de45160475a4cf881acd70c6d7f37a953ce2190176ff52585c7d63",
+      "functions": [
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 40
+        }
+      ],
+      "classes": [
+        {
+          "name": "FileManifestEntry",
+          "methods": [],
+          "properties": [
+            "file_path",
+            "mtime",
+            "file_hash",
+            "recipe_concept_id",
+            "ingredient_ids",
+            "step_ids",
+            "relationship_ids"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "IngredientInfo",
+          "methods": [],
+          "properties": [
+            "name",
+            "amount",
+            "unit",
+            "category",
+            "is_main"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "CookingStep",
+          "methods": [],
+          "properties": [
+            "step_number",
+            "description",
+            "methods",
+            "tools",
+            "time_estimate"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "RecipeInfo",
+          "methods": [
+            "__post_init__"
+          ],
+          "properties": [
+            "name",
+            "difficulty",
+            "category",
+            "cuisine_type",
+            "prep_time",
+            "cook_time",
+            "servings",
+            "ingredients",
+            "steps",
+            "tags",
+            "nutrition_info"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "KimiRecipeAgent",
+          "methods": [
+            "__init__",
+            "call_kimi_api",
+            "infer_category_from_path",
+            "extract_recipe_info",
+            "_fallback_parse"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 246
+        },
+        {
+          "name": "RecipeKnowledgeGraphBuilder",
+          "methods": [
+            "__init__",
+            "_init_relationship_mappings",
+            "_init_predefined_concepts",
+            "_load_manifest",
+            "_save_manifest",
+            "_compute_file_hash",
+            "_remove_concept_and_relationships",
+            "_classify_changed_files",
+            "incremental_process_recipes",
+            "save_progress",
+            "load_progress",
+            "save_batch_data",
+            "merge_all_batches",
+            "generate_concept_id",
+            "process_recipe",
+            "_generate_recipe_synonyms",
+            "_categorize_synonyms_by_language",
+            "_is_english",
+            "_is_chinese",
+            "_format_synonyms_for_neo4j",
+            "_generate_ingredient_synonyms",
+            "batch_process_recipes",
+            "export_to_csv",
+            "export_to_rf2_format",
+            "export_to_neo4j_csv"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1218
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "openai",
+          "specifiers": [
+            "OpenAI"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Dict",
+            "List",
+            "Optional",
+            "Tuple"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass",
+            "asdict",
+            "field"
+          ]
+        },
+        {
+          "source": "pandas",
+          "specifiers": [
+            "pd"
+          ]
+        },
+        {
+          "source": "csv",
+          "specifiers": [
+            "csv"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        }
+      ],
+      "exports": [
+        "FileManifestEntry",
+        "IngredientInfo",
+        "CookingStep",
+        "RecipeInfo",
+        "KimiRecipeAgent",
+        "RecipeKnowledgeGraphBuilder",
+        "main"
+      ],
+      "totalLines": 1588,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/agent(代码系ai生成)/recipe_ontology_design.md": {
+      "filePath": "code/C9/agent(代码系ai生成)/recipe_ontology_design.md",
+      "contentHash": "268acd02c007f48a34271c4feede3367356c17d501f8da4c253d6e4508b272c2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 304,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/agent(代码系ai生成)/requirements.txt": {
+      "filePath": "code/C9/agent(代码系ai生成)/requirements.txt",
+      "contentHash": "97d6acb7e09185bf06959247a450d8a86966dd6942e3e458483418f1e91c60d0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": false
+    },
+    "code/C9/agent(代码系ai生成)/run_ai_agent.py": {
+      "filePath": "code/C9/agent(代码系ai生成)/run_ai_agent.py",
+      "contentHash": "59090619aed64dea7594e152347fe43e8c25af92f47ffd8bc107e5b0db6156f9",
+      "functions": [
+        {
+          "name": "load_config",
+          "params": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "setup_api_key",
+          "params": [],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "get_recipe_directory",
+          "params": [],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "test_single_recipe",
+          "params": [],
+          "exported": true,
+          "lineCount": 47
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 79
+        },
+        {
+          "name": "show_help",
+          "params": [],
+          "exported": true,
+          "lineCount": 30
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "recipe_ai_agent",
+          "specifiers": [
+            "KimiRecipeAgent",
+            "RecipeKnowledgeGraphBuilder"
+          ]
+        }
+      ],
+      "exports": [
+        "load_config",
+        "setup_api_key",
+        "get_recipe_directory",
+        "test_single_recipe",
+        "main",
+        "show_help"
+      ],
+      "totalLines": 217,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/api_server.py": {
+      "filePath": "code/C9/api_server.py",
+      "contentHash": "a2ffe01443d1714fed2498ec101a550ca5db9eb4b697915d64e420d2bf5cadad",
+      "functions": [
+        {
+          "name": "_make_analysis_response",
+          "params": [
+            "analysis"
+          ],
+          "returnType": "QueryAnalysisResponse",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "lifespan",
+          "params": [
+            "app"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "_check_system_ready",
+          "params": [],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "health_check",
+          "params": [],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "get_stats",
+          "params": [],
+          "exported": true,
+          "lineCount": 40
+        },
+        {
+          "name": "chat",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 43
+        },
+        {
+          "name": "_stream_chat",
+          "params": [
+            "question"
+          ],
+          "exported": true,
+          "lineCount": 44
+        },
+        {
+          "name": "rebuild_knowledge_base",
+          "params": [],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "upload_recipe",
+          "params": [
+            "file"
+          ],
+          "exported": true,
+          "lineCount": 41
+        }
+      ],
+      "classes": [
+        {
+          "name": "ChatRequest",
+          "methods": [],
+          "properties": [
+            "question",
+            "stream"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "QueryAnalysisResponse",
+          "methods": [],
+          "properties": [
+            "query_complexity",
+            "relationship_intensity",
+            "reasoning_required",
+            "entity_count",
+            "recommended_strategy",
+            "confidence",
+            "reasoning"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "ChatResponse",
+          "methods": [],
+          "properties": [
+            "answer",
+            "analysis",
+            "response_time_ms"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "KnowledgeBaseStats",
+          "methods": [],
+          "properties": [
+            "total_recipes",
+            "total_ingredients",
+            "total_cooking_steps",
+            "total_documents",
+            "total_chunks",
+            "vector_count"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "RoutingStats",
+          "methods": [
+            "traditional_ratio",
+            "graph_rag_ratio",
+            "combined_ratio"
+          ],
+          "properties": [
+            "total_queries",
+            "traditional_count",
+            "graph_rag_count",
+            "combined_count"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "StatsResponse",
+          "methods": [],
+          "properties": [
+            "knowledge_base",
+            "routing",
+            "system_status"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "HealthResponse",
+          "methods": [],
+          "properties": [
+            "status",
+            "timestamp",
+            "version",
+            "message"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "RebuildResponse",
+          "methods": [],
+          "properties": [
+            "status",
+            "message"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "UploadResponse",
+          "methods": [],
+          "properties": [
+            "status",
+            "message",
+            "filename",
+            "saved_path"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "ErrorResponse",
+          "methods": [],
+          "properties": [
+            "error",
+            "message"
+          ],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "io",
+          "specifiers": [
+            "io"
+          ]
+        },
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Optional"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime",
+            "timezone"
+          ]
+        },
+        {
+          "source": "contextlib",
+          "specifiers": [
+            "asynccontextmanager"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        },
+        {
+          "source": "pydantic",
+          "specifiers": [
+            "BaseModel",
+            "Field"
+          ]
+        },
+        {
+          "source": "fastapi",
+          "specifiers": [
+            "FastAPI",
+            "HTTPException",
+            "UploadFile",
+            "File"
+          ]
+        },
+        {
+          "source": "fastapi.middleware.cors",
+          "specifiers": [
+            "CORSMiddleware"
+          ]
+        },
+        {
+          "source": "fastapi.responses",
+          "specifiers": [
+            "StreamingResponse"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "DEFAULT_CONFIG"
+          ]
+        },
+        {
+          "source": "main",
+          "specifiers": [
+            "AdvancedGraphRAGSystem"
+          ]
+        }
+      ],
+      "exports": [
+        "ChatRequest",
+        "QueryAnalysisResponse",
+        "ChatResponse",
+        "KnowledgeBaseStats",
+        "RoutingStats",
+        "StatsResponse",
+        "HealthResponse",
+        "RebuildResponse",
+        "UploadResponse",
+        "ErrorResponse",
+        "_make_analysis_response",
+        "lifespan",
+        "_check_system_ready",
+        "health_check",
+        "get_stats",
+        "chat",
+        "_stream_chat",
+        "rebuild_knowledge_base",
+        "upload_recipe"
+      ],
+      "totalLines": 453,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/config.py": {
+      "filePath": "code/C9/config.py",
+      "contentHash": "d130563e0e4fae3ad8ebe000d67beebf6adc433144fbfb396f36321358c1ff43",
+      "functions": [],
+      "classes": [
+        {
+          "name": "GraphRAGConfig",
+          "methods": [
+            "__post_init__",
+            "from_dict",
+            "to_dict"
+          ],
+          "properties": [
+            "neo4j_uri",
+            "neo4j_user",
+            "neo4j_password",
+            "neo4j_database",
+            "milvus_host",
+            "milvus_port",
+            "milvus_collection_name",
+            "milvus_dimension",
+            "embedding_model",
+            "llm_model",
+            "top_k",
+            "temperature",
+            "max_tokens",
+            "chunk_size",
+            "chunk_overlap",
+            "max_graph_depth"
+          ],
+          "exported": true,
+          "lineCount": 62
+        }
+      ],
+      "imports": [
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Dict",
+            "Any"
+          ]
+        }
+      ],
+      "exports": [
+        "GraphRAGConfig"
+      ],
+      "totalLines": 73,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/docker-compose.yml": {
+      "filePath": "code/C9/docker-compose.yml",
+      "contentHash": "34181f79a5421e0d83e3a5bc34ad60e886cf35f14c5530a539329e065957833e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 66,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/landing-page/app.html": {
+      "filePath": "code/C9/landing-page/app.html",
+      "contentHash": "e9a64a64ddd8c771f6f5a6d34d32e3cba77b802c6b6cb03c9934ee1015264fa2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 791,
+      "hasStructuralAnalysis": false
+    },
+    "code/C9/landing-page/index.html": {
+      "filePath": "code/C9/landing-page/index.html",
+      "contentHash": "29321f05121ca0325949db226328cf945c5ec9be1138784bf58bd59057b8ebf0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 399,
+      "hasStructuralAnalysis": false
+    },
+    "code/C9/main.py": {
+      "filePath": "code/C9/main.py",
+      "contentHash": "0c8cddfcab4a4567f9be0a850284e9c1a3daf78401aacb2dcf6f052ddc318048",
+      "functions": [
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 22
+        }
+      ],
+      "classes": [
+        {
+          "name": "AdvancedGraphRAGSystem",
+          "methods": [
+            "__init__",
+            "initialize_system",
+            "build_knowledge_base",
+            "_initialize_retrievers",
+            "_show_knowledge_base_stats",
+            "ask_question_with_routing",
+            "run_interactive",
+            "_show_system_stats",
+            "_rebuild_knowledge_base",
+            "_cleanup"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 383
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "List",
+            "Optional"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "DEFAULT_CONFIG",
+            "GraphRAGConfig"
+          ]
+        },
+        {
+          "source": "rag_modules",
+          "specifiers": [
+            "GraphDataPreparationModule",
+            "MilvusIndexConstructionModule",
+            "GenerationIntegrationModule"
+          ]
+        },
+        {
+          "source": "rag_modules.hybrid_retrieval",
+          "specifiers": [
+            "HybridRetrievalModule"
+          ]
+        },
+        {
+          "source": "rag_modules.graph_rag_retrieval",
+          "specifiers": [
+            "GraphRAGRetrieval"
+          ]
+        },
+        {
+          "source": "rag_modules.intelligent_query_router",
+          "specifiers": [
+            "IntelligentQueryRouter",
+            "QueryAnalysis"
+          ]
+        }
+      ],
+      "exports": [
+        "AdvancedGraphRAGSystem",
+        "main"
+      ],
+      "totalLines": 441,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/rag_modules/__init__.py": {
+      "filePath": "code/C9/rag_modules/__init__.py",
+      "contentHash": "076739d2a38bc253c0082501b0328bf6e7a419277305113c0214cc6e6aedd64c",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": ".graph_data_preparation",
+          "specifiers": [
+            "GraphDataPreparationModule"
+          ]
+        },
+        {
+          "source": ".milvus_index_construction",
+          "specifiers": [
+            "MilvusIndexConstructionModule"
+          ]
+        },
+        {
+          "source": ".hybrid_retrieval",
+          "specifiers": [
+            "HybridRetrievalModule"
+          ]
+        },
+        {
+          "source": ".generation_integration",
+          "specifiers": [
+            "GenerationIntegrationModule"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/rag_modules/generation_integration.py": {
+      "filePath": "code/C9/rag_modules/generation_integration.py",
+      "contentHash": "fdcccd079fff7525be09b86f5223deea19ed6134dd101b2234ebd43e244fe46c",
+      "functions": [],
+      "classes": [
+        {
+          "name": "GenerationIntegrationModule",
+          "methods": [
+            "__init__",
+            "generate_adaptive_answer",
+            "generate_adaptive_answer_stream"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 161
+        }
+      ],
+      "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "List"
+          ]
+        },
+        {
+          "source": "openai",
+          "specifiers": [
+            "OpenAI"
+          ]
+        },
+        {
+          "source": "langchain_core.documents",
+          "specifiers": [
+            "Document"
+          ]
+        }
+      ],
+      "exports": [
+        "GenerationIntegrationModule"
+      ],
+      "totalLines": 175,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/rag_modules/graph_data_preparation.py": {
+      "filePath": "code/C9/rag_modules/graph_data_preparation.py",
+      "contentHash": "7a99598cf4becaf65f5fd0c98c870353e1b611bb5f1dd1d51fb31b17d821b261",
+      "functions": [],
+      "classes": [
+        {
+          "name": "GraphNode",
+          "methods": [],
+          "properties": [
+            "node_id",
+            "labels",
+            "name",
+            "properties"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "GraphRelation",
+          "methods": [],
+          "properties": [
+            "start_node_id",
+            "end_node_id",
+            "relation_type",
+            "properties"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "GraphDataPreparationModule",
+          "methods": [
+            "__init__",
+            "_connect",
+            "close",
+            "load_graph_data",
+            "build_recipe_documents",
+            "chunk_documents",
+            "get_statistics",
+            "__del__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 428
+        }
+      ],
+      "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "List",
+            "Dict",
+            "Any",
+            "Optional"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "neo4j",
+          "specifiers": [
+            "GraphDatabase"
+          ]
+        },
+        {
+          "source": "langchain_core.documents",
+          "specifiers": [
+            "Document"
+          ]
+        }
+      ],
+      "exports": [
+        "GraphNode",
+        "GraphRelation",
+        "GraphDataPreparationModule"
+      ],
+      "totalLines": 458,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/rag_modules/graph_indexing.py": {
+      "filePath": "code/C9/rag_modules/graph_indexing.py",
+      "contentHash": "0bf7194aa6e349ef650585fbca9520751c2145d0ee95221890c49ea65b03c1f3",
+      "functions": [],
+      "classes": [
+        {
+          "name": "EntityKeyValue",
+          "methods": [],
+          "properties": [
+            "entity_name",
+            "index_keys",
+            "value_content",
+            "entity_type",
+            "metadata"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "RelationKeyValue",
+          "methods": [],
+          "properties": [
+            "relation_id",
+            "index_keys",
+            "value_content",
+            "relation_type",
+            "source_entity",
+            "target_entity",
+            "metadata"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "GraphIndexingModule",
+          "methods": [
+            "__init__",
+            "create_entity_key_values",
+            "create_relation_key_values",
+            "_generate_relation_index_keys",
+            "_llm_enhance_relation_keys",
+            "deduplicate_entities_and_relations",
+            "_rebuild_key_mappings",
+            "get_entities_by_key",
+            "get_relations_by_key",
+            "get_statistics"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 350
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Dict",
+            "List",
+            "Tuple",
+            "Any",
+            "Optional"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "defaultdict"
+          ]
+        },
+        {
+          "source": "langchain_core.documents",
+          "specifiers": [
+            "Document"
+          ]
+        }
+      ],
+      "exports": [
+        "EntityKeyValue",
+        "RelationKeyValue",
+        "GraphIndexingModule"
+      ],
+      "totalLines": 387,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/rag_modules/graph_rag_retrieval.py": {
+      "filePath": "code/C9/rag_modules/graph_rag_retrieval.py",
+      "contentHash": "055887311f4b70b8a74e51ffe2848780d9cba438daf6e01ce1e152acaa625dbe",
+      "functions": [],
+      "classes": [
+        {
+          "name": "QueryType",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "GraphQuery",
+          "methods": [],
+          "properties": [
+            "query_type",
+            "source_entities",
+            "target_entities",
+            "relation_types",
+            "max_depth",
+            "max_nodes",
+            "constraints"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "GraphPath",
+          "methods": [],
+          "properties": [
+            "nodes",
+            "relationships",
+            "path_length",
+            "relevance_score",
+            "path_type"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "KnowledgeSubgraph",
+          "methods": [],
+          "properties": [
+            "central_nodes",
+            "connected_nodes",
+            "relationships",
+            "graph_metrics",
+            "reasoning_chains"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "GraphRAGRetrieval",
+          "methods": [
+            "__init__",
+            "initialize",
+            "_build_graph_index",
+            "understand_graph_query",
+            "multi_hop_traversal",
+            "extract_knowledge_subgraph",
+            "graph_structure_reasoning",
+            "adaptive_query_planning",
+            "graph_rag_search",
+            "_parse_neo4j_path",
+            "_build_knowledge_subgraph",
+            "_paths_to_documents",
+            "_subgraph_to_documents",
+            "_build_path_description",
+            "_build_subgraph_description",
+            "_rank_by_graph_relevance",
+            "_analyze_query_complexity",
+            "_identify_reasoning_patterns",
+            "_build_reasoning_chain",
+            "_validate_reasoning_chains",
+            "_find_entity_relations",
+            "_find_shortest_paths",
+            "_fallback_subgraph_extraction",
+            "close"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 647
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "defaultdict",
+            "deque"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "List",
+            "Dict",
+            "Tuple",
+            "Any",
+            "Optional",
+            "Set"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "enum",
+          "specifiers": [
+            "Enum"
+          ]
+        },
+        {
+          "source": "langchain_core.documents",
+          "specifiers": [
+            "Document"
+          ]
+        },
+        {
+          "source": "neo4j",
+          "specifiers": [
+            "GraphDatabase"
+          ]
+        }
+      ],
+      "exports": [
+        "QueryType",
+        "GraphQuery",
+        "GraphPath",
+        "KnowledgeSubgraph",
+        "GraphRAGRetrieval"
+      ],
+      "totalLines": 701,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/rag_modules/hybrid_retrieval.py": {
+      "filePath": "code/C9/rag_modules/hybrid_retrieval.py",
+      "contentHash": "fd3abbbc43123c258b7753fbbcb8aa9883c6e0ae7164ddc4ae29be73f0052771",
+      "functions": [],
+      "classes": [
+        {
+          "name": "RetrievalResult",
+          "methods": [],
+          "properties": [
+            "content",
+            "node_id",
+            "node_type",
+            "relevance_score",
+            "retrieval_level",
+            "metadata"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "HybridRetrievalModule",
+          "methods": [
+            "__init__",
+            "initialize",
+            "_build_graph_index",
+            "_extract_relationships_from_graph",
+            "extract_query_keywords",
+            "entity_level_retrieval",
+            "_neo4j_entity_level_search",
+            "topic_level_retrieval",
+            "_neo4j_topic_level_search",
+            "dual_level_retrieval",
+            "vector_search_enhanced",
+            "_get_node_neighbors",
+            "hybrid_search",
+            "close"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 575
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "List",
+            "Dict",
+            "Tuple",
+            "Any"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "langchain_core.documents",
+          "specifiers": [
+            "Document"
+          ]
+        },
+        {
+          "source": "langchain_community.retrievers",
+          "specifiers": [
+            "BM25Retriever"
+          ]
+        },
+        {
+          "source": "neo4j",
+          "specifiers": [
+            "GraphDatabase"
+          ]
+        },
+        {
+          "source": ".graph_indexing",
+          "specifiers": [
+            "GraphIndexingModule"
+          ]
+        }
+      ],
+      "exports": [
+        "RetrievalResult",
+        "HybridRetrievalModule"
+      ],
+      "totalLines": 603,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/rag_modules/intelligent_query_router.py": {
+      "filePath": "code/C9/rag_modules/intelligent_query_router.py",
+      "contentHash": "2548495f80804d4407499bab179859799c1b057b903fa01671037115c86d90ab",
+      "functions": [],
+      "classes": [
+        {
+          "name": "SearchStrategy",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "QueryAnalysis",
+          "methods": [],
+          "properties": [
+            "query_complexity",
+            "relationship_intensity",
+            "reasoning_required",
+            "entity_count",
+            "recommended_strategy",
+            "confidence",
+            "reasoning"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "IntelligentQueryRouter",
+          "methods": [
+            "__init__",
+            "analyze_query",
+            "_rule_based_analysis",
+            "route_query",
+            "_combined_search",
+            "_post_process_results",
+            "_update_route_stats",
+            "get_route_statistics",
+            "explain_routing_decision"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 271
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "List",
+            "Dict",
+            "Tuple",
+            "Any",
+            "Optional"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "enum",
+          "specifiers": [
+            "Enum"
+          ]
+        },
+        {
+          "source": "langchain_core.documents",
+          "specifiers": [
+            "Document"
+          ]
+        }
+      ],
+      "exports": [
+        "SearchStrategy",
+        "QueryAnalysis",
+        "IntelligentQueryRouter"
+      ],
+      "totalLines": 307,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/rag_modules/milvus_index_construction.py": {
+      "filePath": "code/C9/rag_modules/milvus_index_construction.py",
+      "contentHash": "f99aea7e15d33104ea732c7fda4bc6120dd03aa81d272cb6af7e6a6c83f62ac3",
+      "functions": [],
+      "classes": [
+        {
+          "name": "MilvusIndexConstructionModule",
+          "methods": [
+            "__init__",
+            "_safe_truncate",
+            "_setup_client",
+            "_setup_embeddings",
+            "_create_collection_schema",
+            "create_collection",
+            "create_index",
+            "build_vector_index",
+            "add_documents",
+            "similarity_search",
+            "get_collection_stats",
+            "delete_collection",
+            "has_collection",
+            "load_collection",
+            "close",
+            "__del__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 488
+        }
+      ],
+      "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "List",
+            "Dict",
+            "Any",
+            "Optional"
+          ]
+        },
+        {
+          "source": "pymilvus",
+          "specifiers": [
+            "MilvusClient",
+            "DataType",
+            "CollectionSchema",
+            "FieldSchema"
+          ]
+        },
+        {
+          "source": "langchain_huggingface",
+          "specifiers": [
+            "HuggingFaceEmbeddings"
+          ]
+        },
+        {
+          "source": "langchain_core.documents",
+          "specifiers": [
+            "Document"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        }
+      ],
+      "exports": [
+        "MilvusIndexConstructionModule"
+      ],
+      "totalLines": 503,
+      "hasStructuralAnalysis": true
+    },
+    "code/C9/requirements.txt": {
+      "filePath": "code/C9/requirements.txt",
+      "contentHash": "5e5ec64b988342f101f9f92d97082cea1dd9cf3d722cc0ea6f68e0b9f916671d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 38,
+      "hasStructuralAnalysis": false
+    },
+    "data/C9/cypher/neo4j_import.cypher": {
+      "filePath": "data/C9/cypher/neo4j_import.cypher",
+      "contentHash": "94b86fa91498b1febcb185759b9766a45bd4e1a8a989b9d7c68dae12d1a93003",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 369,
+      "hasStructuralAnalysis": false
+    },
+    "data/C9/cypher/nodes.csv": {
+      "filePath": "data/C9/cypher/nodes.csv",
+      "contentHash": "e5b18fc08804fe4dac26350afe58612af1bdde1de5c77e11d59e15f206ef2af7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 5762,
+      "hasStructuralAnalysis": false
+    },
+    "data/C9/cypher/relationships.csv": {
+      "filePath": "data/C9/cypher/relationships.csv",
+      "contentHash": "12405d870ec0f077666f3d7b7d1eaedb3bf3b18bd4d875f9ff1f446035c4ad44",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6057,
+      "hasStructuralAnalysis": false
+    },
+    "data/C9/docker-compose.yml": {
+      "filePath": "data/C9/docker-compose.yml",
+      "contentHash": "8b53fb5fc8e7cd00bdd26f36edc0d230d225934cbe5bd9398770f58cf547ce18",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 62,
+      "hasStructuralAnalysis": true
+    },
+    "opencode.jsonc": {
+      "filePath": "opencode.jsonc",
+      "contentHash": "578c6965fb0902811aeb1e9607bcf4c41aa0de3e25a0fdfbe0b7a838a31496a1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    }
+  }
+}

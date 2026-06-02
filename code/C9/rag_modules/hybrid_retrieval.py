@@ -596,8 +596,82 @@ class HybridRetrievalModule:
         logger.info(f"混合检索完成，返回 {len(final_docs)} 个文档")
         return final_docs
         
+    def incremental_update(
+        self,
+        new_recipe_ids: List[str],
+        new_ingredient_ids: List[str] = None,
+        new_step_ids: List[str] = None,
+    ):
+        """
+        增量更新图索引和 BM25：为新食谱添加实体/关系 KV，并重建 BM25。
+
+        Args:
+            new_recipe_ids: 新增的 recipe nodeId 列表
+            new_ingredient_ids: 新增的 ingredient nodeId 列表（可选）
+            new_step_ids: 新增的 cooking step nodeId 列表（可选）
+        """
+        logger.info(f"增量更新图索引: {len(new_recipe_ids)} 个新菜谱, "
+                    f"ingredients={new_ingredient_ids}, steps={new_step_ids}")
+
+        # 1. 筛选新增的实体对象
+        existing_recipe_ids = {n.node_id for n in self.data_module.recipes}
+        new_recipes = [n for n in self.data_module.recipes if n.node_id in set(new_recipe_ids)]
+        new_ingredients = [n for n in self.data_module.ingredients
+                           if (new_ingredient_ids and n.node_id in set(new_ingredient_ids))]
+        new_steps = [n for n in self.data_module.cooking_steps
+                     if (new_step_ids and n.node_id in set(new_step_ids))]
+
+        logger.info(f"  过滤后: recipes={len(new_recipes)}/{len(new_recipe_ids)}, "
+                    f"ingredients={len(new_ingredients)}, steps={len(new_steps)}")
+
+        if new_recipes:
+            # 2. 追加实体 KV
+            logger.info(f"  追加实体 KV: {len(new_recipes)} recipes, {len(new_ingredients)} ingredients, {len(new_steps)} steps")
+            self.graph_indexing.create_entity_key_values(new_recipes, new_ingredients, new_steps)
+
+            # 3. 只提取新 recipe 相关的关系
+            new_relationships = self._extract_relationships_for_recipes(new_recipe_ids)
+            logger.info(f"  提取到 {len(new_relationships)} 个关系")
+            if new_relationships:
+                self.graph_indexing.create_relation_key_values(new_relationships)
+
+            # 4. 去重
+            self.graph_indexing.deduplicate_entities_and_relations()
+
+            stats = self.graph_indexing.get_statistics()
+            logger.info(
+                f"  图索引增量更新完成: entities={stats.get('total_entities', '?')}, "
+                f"relations={stats.get('total_relations', '?')}"
+            )
+
+        # 5. 重建 BM25（全量 chunks，毫秒级）
+        if self.data_module.chunks:
+            self.bm25_retriever = BM25Retriever.from_documents(self.data_module.chunks)
+            logger.info(f"  BM25 已重建: {len(self.data_module.chunks)} 个文档块")
+
+    def _extract_relationships_for_recipes(self, recipe_ids: List[str]) -> List[Tuple[str, str, str]]:
+        """只提取指定 recipe 节点相关的关系"""
+        relationships = []
+        try:
+            with self.driver.session() as session:
+                query = """
+                MATCH (source)-[r]->(target)
+                WHERE source.nodeId IN $ids OR target.nodeId IN $ids
+                RETURN source.nodeId as source_id, type(r) as relation_type, target.nodeId as target_id
+                """
+                result = session.run(query, ids=recipe_ids)
+                for record in result:
+                    relationships.append((
+                        record["source_id"],
+                        record["relation_type"],
+                        record["target_id"],
+                    ))
+        except Exception as e:
+            logger.error(f"提取新菜谱关系失败: {e}")
+        return relationships
+
     def close(self):
         """关闭资源连接"""
         if self.driver:
             self.driver.close()
-            logger.info("Neo4j连接已关闭") 
+            logger.info("Neo4j连接已关闭")

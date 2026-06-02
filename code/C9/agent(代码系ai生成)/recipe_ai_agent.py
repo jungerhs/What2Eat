@@ -6,6 +6,7 @@
 
 import os
 import json
+import logging
 import re
 import time
 import hashlib
@@ -15,6 +16,8 @@ from dataclasses import dataclass, asdict, field
 import pandas as pd
 import csv
 from datetime import datetime
+
+logger = logging.getLogger("recipe_ai_agent")
 
 @dataclass
 class FileManifestEntry:
@@ -73,9 +76,10 @@ class RecipeInfo:
 class KimiRecipeAgent:
     """Kimi菜谱解析AI Agent"""
     
-    def __init__(self, api_key: str, base_url: str = "https://api.moonshot.cn/v1"):
+    def __init__(self, api_key: str, base_url: str = "https://api.moonshot.cn/v1", model: str = "kimi-k2-0711-preview"):
         self.api_key = api_key
         self.base_url = base_url
+        self.model = model
         self.client = OpenAI(
             api_key=api_key,
             base_url=base_url
@@ -117,14 +121,24 @@ class KimiRecipeAgent:
         for attempt in range(max_retries):
             try:
                 response = self.client.chat.completions.create(
-                    model="kimi-k2-0711-preview",
+                    model=self.model,
                     messages=messages,
                     temperature=0.3,
-                    max_tokens=2048,
+                    max_tokens=4096,
                     stream=False
                 )
-                
-                return response.choices[0].message.content
+
+                finish_reason = response.choices[0].finish_reason
+                content = response.choices[0].message.content
+
+                # 如果响应因 token 限制被截断，记录警告
+                if finish_reason == "length":
+                    logger.warning(
+                        f"Kimi API 响应被截断 (max_tokens=4096 不足)! "
+                        f"返回内容长度: {len(content)} 字符"
+                    )
+
+                return content
                     
             except Exception as e:
                 print(f"API调用错误 (尝试 {attempt + 1}): {str(e)}")
@@ -226,7 +240,7 @@ class KimiRecipeAgent:
         ]
         try:
             response = self.call_kimi_api(messages)
-            
+
             # 清理响应，确保是有效的JSON
             response = response.strip()
             if response.startswith("```json"):
@@ -234,10 +248,13 @@ class KimiRecipeAgent:
             if response.endswith("```"):
                 response = response[:-3]
             response = response.strip()
-            
+
+            # 日志记录原始响应（截断前500字符）
+            logger.info(f"Kimi 原始响应 (前300字符): {response[:300]}")
+
             # 解析JSON
             recipe_data = json.loads(response)
-            
+
             # 转换为RecipeInfo对象
             recipe_info = RecipeInfo(
                 name=recipe_data.get("name", ""),
@@ -249,9 +266,10 @@ class KimiRecipeAgent:
                 servings=recipe_data.get("servings", ""),
                 nutrition_info=recipe_data.get("nutrition_info", {})
             )
-            
+
             # 转换食材信息
-            for ing_data in recipe_data.get("ingredients", []):
+            raw_ingredients = recipe_data.get("ingredients", [])
+            for ing_data in raw_ingredients:
                 ingredient = IngredientInfo(
                     name=ing_data.get("name", ""),
                     amount=ing_data.get("amount", ""),
@@ -260,9 +278,10 @@ class KimiRecipeAgent:
                     is_main=ing_data.get("is_main", True)
                 )
                 recipe_info.ingredients.append(ingredient)
-            
+
             # 转换步骤信息
-            for step_data in recipe_data.get("steps", []):
+            raw_steps = recipe_data.get("steps", [])
+            for step_data in raw_steps:
                 step = CookingStep(
                     step_number=step_data.get("step_number", 0),
                     description=step_data.get("description", ""),
@@ -271,31 +290,54 @@ class KimiRecipeAgent:
                     time_estimate=step_data.get("time_estimate", "")
                 )
                 recipe_info.steps.append(step)
-            
+
             # 添加标签
             recipe_info.tags = recipe_data.get("tags", [])
-            
+
+            # 空结果警告
+            if len(recipe_info.ingredients) == 0:
+                logger.warning(f"AI 提取到 0 个食材! JSON keys: {list(recipe_data.keys())}, "
+                               f"ingredients 类型: {type(raw_ingredients)}, 值: {str(raw_ingredients)[:200]}")
+            if len(recipe_info.steps) == 0:
+                logger.warning(f"AI 提取到 0 个步骤! steps 类型: {type(raw_steps)}, 值: {str(raw_steps)[:200]}")
+
+            logger.info(f"AI 解析成功: name={recipe_info.name}, "
+                        f"ingredients={len(recipe_info.ingredients)}, steps={len(recipe_info.steps)}")
+
+            # AI 返回空数据时，自动使用规则回退解析补充
+            if len(recipe_info.ingredients) == 0 or len(recipe_info.steps) == 0:
+                logger.warning(f"AI 返回空数据 (ingredients={len(recipe_info.ingredients)}, "
+                               f"steps={len(recipe_info.steps)}), 使用规则回退解析...")
+                fallback = self._fallback_parse(markdown_content)
+                if len(fallback.ingredients) > len(recipe_info.ingredients):
+                    recipe_info.ingredients = fallback.ingredients
+                    logger.info(f"  回退补充: ingredients {len(fallback.ingredients)} 个")
+                if len(fallback.steps) > len(recipe_info.steps):
+                    recipe_info.steps = fallback.steps
+                    logger.info(f"  回退补充: steps {len(fallback.steps)} 个")
+                if fallback.tags and len(fallback.tags) > len(recipe_info.tags or []):
+                    recipe_info.tags = fallback.tags
+
             return recipe_info
-            
+
         except json.JSONDecodeError as e:
-            print(f"JSON解析错误: {e}")
-            print(f"原始响应: {response}")
+            logger.warning(f"JSON 解析失败: {e}, 使用规则回退解析")
             return self._fallback_parse(markdown_content)
         except Exception as e:
-            print(f"AI解析错误: {e}")
+            logger.error(f"AI 解析错误: {e}, 使用规则回退解析")
             return self._fallback_parse(markdown_content)
     
     def _fallback_parse(self, content: str) -> RecipeInfo:
-        """备用解析方法（基于规则）"""
+        """备用解析方法（基于规则）—— 当 AI 返回空数据时使用"""
         lines = content.strip().split('\n')
-        
+
         # 提取菜谱名称
         name = ""
         for line in lines:
             if line.startswith('# '):
                 name = line[2:].replace('的做法', '').strip()
                 break
-        
+
         # 提取难度
         difficulty = 3  # 默认3星
         for line in lines:
@@ -303,18 +345,131 @@ class KimiRecipeAgent:
                 stars = line.count('★')
                 difficulty = min(max(stars, 1), 5)
                 break
-        
-        # 简单分类判断
+
+        # 提取分类
         category = "其他"
-        if any(keyword in name for keyword in ["蛋", "豆腐"]):
+        if any(kw in name for kw in ["蛋", "豆腐", "茄子", "土豆", "菜", "菇", "笋", "豆"]):
             category = "素菜"
-        elif any(keyword in name for keyword in ["肉", "鸡", "鱼", "虾"]):
+        if any(kw in name for kw in ["肉", "鸡", "鱼", "虾", "蟹", "牛", "猪", "羊", "鸭", "排骨"]):
             category = "荤菜"
-        
+
+        # ── 解析食材 ──
+        ingredients = []
+        # 先收集"必备原料和工具"中的食材名称
+        ingredient_names = set()
+        in_ingredient_section = False
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('## 必备原料和工具'):
+                in_ingredient_section = True
+                continue
+            if in_ingredient_section and stripped.startswith('## '):
+                in_ingredient_section = False
+                break
+            if in_ingredient_section and stripped.startswith('- '):
+                item = stripped[2:].strip()
+                if item and not item.startswith('[') and not item.startswith('参考'):
+                    ingredient_names.add(item)
+
+        # 再从"计算"部分提取精确用量
+        in_calc_section = False
+        amount_map = {}  # name -> (amount, unit)
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('## 计算'):
+                in_calc_section = True
+                continue
+            if in_calc_section and stripped.startswith('## '):
+                in_calc_section = False
+                break
+            if in_calc_section and stripped.startswith('- '):
+                item = stripped[2:].strip()
+                # 匹配: "鸡腿 500 g" 或 "料酒 15 ml" 或 "生抽 30 ml"
+                # 也匹配: "盐 2.5 g" 或 "鸡腿 500 g（约 3 只）"
+                m = re.match(r'(.+?)\s+([\d.]+)\s*[-~]?\s*(\d+)?\s*(g|ml|克|毫升|个|只|片|根|瓣|勺|汤匙|茶匙|杯|碗|块|条|张)', stripped)
+                if m:
+                    ing_name = m.group(1).strip()
+                    amount = m.group(2)
+                    # 处理范围值如 "15-25 ml"
+                    if m.group(3):
+                        amount = f"{m.group(2)}-{m.group(3)}"
+                    unit = m.group(4)
+                    amount_map[ing_name] = (amount, unit)
+                    ingredient_names.add(ing_name)
+                else:
+                    # 可能已经是纯食材名（不加用量）
+                    pass
+
+        # 合并食材列表
+        for ing_name in ingredient_names:
+            amount, unit = amount_map.get(ing_name, ("适量", ""))
+            cat = "调料" if any(kw in ing_name for kw in ["盐", "酱油", "生抽", "老抽", "醋", "糖", "料酒", "蚝油", "味精", "蜂蜜", "黑椒", "胡椒", "油"]) else (
+                "蛋白质" if any(kw in ing_name for kw in ["肉", "鸡", "鱼", "虾", "蛋", "蟹", "牛", "猪", "羊", "鸭"]) else (
+                "淀粉类" if any(kw in ing_name for kw in ["米", "面", "粉", "淀粉", "面包"]) else (
+                "蔬菜"
+            )))
+            ingredients.append(IngredientInfo(
+                name=ing_name,
+                amount=amount,
+                unit=unit,
+                category=cat,
+                is_main=cat != "调料",
+            ))
+
+        # ── 解析步骤 ──
+        steps = []
+        in_step_section = False
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('## 操作'):
+                in_step_section = True
+                continue
+            if in_step_section and stripped.startswith('## '):
+                in_step_section = False
+                break
+            if in_step_section:
+                m = re.match(r'(\d+)\.\s*(.+)', stripped)
+                if m:
+                    step_num = int(m.group(1))
+                    desc = m.group(2).strip()
+                    # 推断烹饪方法
+                    methods = []
+                    method_kw = ["炒", "炸", "煮", "蒸", "烤", "炖", "焖", "煎", "红烧", "腌制", "切", "焯", "拌", "淋"]
+                    for mw in method_kw:
+                        if mw in desc:
+                            methods.append(mw)
+                    steps.append(CookingStep(
+                        step_number=step_num,
+                        description=desc,
+                        methods=methods,
+                        tools=[],
+                        time_estimate="",
+                    ))
+
+        # ── 解析标签/提示 ──
+        tags = []
+        in_extra_section = False
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('## 附加内容'):
+                in_extra_section = True
+                continue
+            if in_extra_section and stripped.startswith('## '):
+                break
+            if in_extra_section and stripped.startswith('- '):
+                tip = stripped[2:].strip()
+                if tip and len(tip) > 5 and "Issue" not in tip and "Pull request" not in tip and "参考" not in tip:
+                    tags.append(tip[:50])  # 截断长文本
+
+        logger.info(f"回退解析完成: name={name}, ingredients={len(ingredients)}, steps={len(steps)}, tags={len(tags)}")
+
         return RecipeInfo(
             name=name or "未知菜谱",
             difficulty=difficulty,
-            category=category
+            category=category,
+            ingredients=ingredients,
+            steps=steps,
+            tags=tags,
         )
 
 class RecipeKnowledgeGraphBuilder:
@@ -821,15 +976,18 @@ class RecipeKnowledgeGraphBuilder:
         self.concept_id_counter += 1
         return str(self.concept_id_counter)
     
-    def process_recipe(self, markdown_content: str, file_path: str, existing_recipe_id: str = None) -> Dict:
+    def process_recipe(self, markdown_content: str, file_path: str, existing_recipe_id: str = None,
+                       recipe_info = None) -> Dict:
         """处理单个菜谱
 
         Args:
             markdown_content: 菜谱Markdown内容
             file_path: 文件路径
             existing_recipe_id: 已存在的概念ID（增量更新时复用）
+            recipe_info: 预提取的 RecipeInfo（避免重复调用 AI）
         """
-        recipe_info = self.ai_agent.extract_recipe_info(markdown_content, file_path)
+        if recipe_info is None:
+            recipe_info = self.ai_agent.extract_recipe_info(markdown_content, file_path)
 
         self._last_ingredient_ids = []
         self._last_step_ids = []

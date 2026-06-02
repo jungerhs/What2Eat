@@ -1,8 +1,8 @@
 {
   "kimi": {
-    "api_key": "sk-xxx",
-    "base_url": "https://api.moonshot.cn/v1",
-    "model": "kimi-k2-0711-preview",
+    "api_key": "***REMOVED***",
+    "base_url": "https://api.deepseek.com",
+    "model": "deepseek-v4-flash",
     "max_retries": 3,
     "timeout": 30
   },

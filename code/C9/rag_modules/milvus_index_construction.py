@@ -63,17 +63,31 @@ class MilvusIndexConstructionModule:
     def _setup_client(self):
         """初始化Milvus客户端"""
         try:
+            import socket
+            # 快速端口探测，避免 TCP 连接长时间阻塞
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(3)
+            port_reachable = sock.connect_ex((self.host, self.port)) == 0
+            sock.close()
+            if not port_reachable:
+                raise ConnectionError(
+                    f"Milvus 端口 {self.host}:{self.port} 不可达，请确认 docker-compose 已启动"
+                )
+
             self.client = MilvusClient(
-                uri=f"http://{self.host}:{self.port}"
+                uri=f"http://{self.host}:{self.port}",
+                timeout=10,
             )
             logger.info(f"已连接到Milvus服务器: {self.host}:{self.port}")
-            
+
             # 测试连接
             collections = self.client.list_collections()
             logger.info(f"连接成功，当前集合: {collections}")
-            
+
         except Exception as e:
             logger.error(f"连接Milvus失败: {e}")
+            print(f"\n❌ Milvus 连接失败: {e}")
+            print(f"   请确认 Milvus 服务已启动: cd code/C9 && docker-compose up -d")
             raise
     
     def _setup_embeddings(self):
@@ -313,7 +327,7 @@ class MilvusIndexConstructionModule:
             self.client.insert(
                 collection_name=self.collection_name,
                 data=entities
-            )
+            ) 
             
             logger.info("新文档添加完成")
             return True

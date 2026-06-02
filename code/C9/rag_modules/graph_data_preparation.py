@@ -175,7 +175,63 @@ class GraphDataPreparationModule:
             'ingredients': len(self.ingredients),
             'cooking_steps': len(self.cooking_steps)
         }
-    
+
+    def load_recipes_by_ids(self, recipe_ids: List[str]) -> List[str]:
+        """
+        只加载指定的 recipe 节点及其关联的 ingredients/steps（增量用）。
+        追加到 self.recipes / self.ingredients / self.cooking_steps。
+
+        Args:
+            recipe_ids: 菜谱 nodeId 列表
+
+        Returns:
+            实际加载到的 recipe nodeId 列表
+        """
+        if not recipe_ids:
+            return []
+
+        logger.info(f"正在从 Neo4j 加载 {len(recipe_ids)} 个指定菜谱...")
+        logger.debug(f"  recipe_ids: {recipe_ids}")
+
+        with self.driver.session() as session:
+            # 加载指定菜谱
+            result = session.run(
+                """
+                MATCH (r:Recipe)
+                WHERE r.nodeId IN $ids
+                OPTIONAL MATCH (r)-[:BELONGS_TO_CATEGORY]->(c:Category)
+                WITH r, collect(c.name) as categories
+                RETURN r.nodeId as nodeId, labels(r) as labels, r.name as name,
+                       properties(r) as originalProperties,
+                       CASE WHEN size(categories) > 0
+                            THEN categories[0]
+                            ELSE COALESCE(r.category, '未知') END as mainCategory
+                ORDER BY r.nodeId
+                """,
+                ids=recipe_ids,
+            )
+            loaded = []
+            for record in result:
+                properties = dict(record["originalProperties"])
+                properties["category"] = record["mainCategory"]
+                node = GraphNode(
+                    node_id=record["nodeId"],
+                    labels=record["labels"],
+                    name=record["name"],
+                    properties=properties,
+                )
+                # 避免重复追加
+                existing_ids = {n.node_id for n in self.recipes}
+                if node.node_id not in existing_ids:
+                    self.recipes.append(node)
+                    logger.debug(f"  加载菜谱: {record['name']} (id={record['nodeId']})")
+                else:
+                    logger.debug(f"  跳过重复: {record['name']} (id={record['nodeId']})")
+                loaded.append(node.node_id)
+            logger.info(f"加载了 {len(loaded)} 个菜谱节点 (recipes 总数: {len(self.recipes)})")
+
+        return loaded
+
     def build_recipe_documents(self) -> List[Document]:
         """
         构建菜谱文档，集成相关的食材和步骤信息
@@ -311,28 +367,38 @@ class GraphDataPreparationModule:
         logger.info(f"成功构建 {len(documents)} 个菜谱文档")
         return documents
     
-    def chunk_documents(self, chunk_size: int = 500, chunk_overlap: int = 50) -> List[Document]:
+    def chunk_documents(self, chunk_size: int = 500, chunk_overlap: int = 50,
+                        documents: Optional[List[Document]] = None) -> List[Document]:
         """
         对文档进行分块处理
-        
+
         Args:
             chunk_size: 分块大小
             chunk_overlap: 重叠大小
-            
+            documents: 要分块的文档列表（None 则使用 self.documents 全量分块）
+
         Returns:
             分块后的文档列表
         """
-        logger.info(f"正在进行文档分块，块大小: {chunk_size}, 重叠: {chunk_overlap}")
-        
-        if not self.documents:
+        source_docs = documents if documents is not None else self.documents
+        is_incremental = documents is not None
+
+        logger.info(f"正在进行文档分块，块大小: {chunk_size}, 重叠: {chunk_overlap}"
+                    f"{' (增量模式)' if is_incremental else ' (全量模式)'}")
+        logger.debug(f"  源文档数: {len(source_docs)}, 现有chunks: {len(self.chunks)}, "
+                     f"is_incremental={is_incremental}")
+
+        if not source_docs:
             raise ValueError("请先构建文档")
-        
+
+        # 维护全局 chunk_id 序列（增量时从已有 chunks 数量开始）
+        base_chunk_id = len(self.chunks) if is_incremental else 0
         chunks = []
-        chunk_id = 0
-        
-        for doc in self.documents:
+        chunk_id = base_chunk_id
+
+        for doc in source_docs:
             content = doc.page_content
-            
+
             # 简单的按长度分块
             if len(content) <= chunk_size:
                 # 内容较短，不需要分块
@@ -356,13 +422,13 @@ class GraphDataPreparationModule:
                 if len(sections) <= 1:
                     # 没有二级标题，按长度强制分块
                     total_chunks = (len(content) - 1) // (chunk_size - chunk_overlap) + 1
-                     
+
                     for i in range(total_chunks):
                         start = i * (chunk_size - chunk_overlap)
                         end = min(start + chunk_size, len(content))
-                        
+
                         chunk_content = content[start:end]
-                        
+
                         chunk = Document(
                             page_content=chunk_content,
                             metadata={
@@ -382,12 +448,10 @@ class GraphDataPreparationModule:
                     total_chunks = len(sections)
                     for i, section in enumerate(sections):
                         if i == 0:
-                            # 第一个部分包含标题
                             chunk_content = section
                         else:
-                            # 其他部分添加章节标题
                             chunk_content = f"## {section}"
-                        
+
                         chunk = Document(
                             page_content=chunk_content,
                             metadata={
@@ -403,9 +467,13 @@ class GraphDataPreparationModule:
                         )
                         chunks.append(chunk)
                         chunk_id += 1
-        
-        self.chunks = chunks
-        logger.info(f"文档分块完成，共生成 {len(chunks)} 个块")
+
+        if is_incremental:
+            self.chunks.extend(chunks)
+            logger.info(f"文档分块完成 (增量): 新增 {len(chunks)} 个块, 总计 {len(self.chunks)} 个")
+        else:
+            self.chunks = chunks
+            logger.info(f"文档分块完成 (全量): 共 {len(self.chunks)} 个块")
         return chunks
     
 

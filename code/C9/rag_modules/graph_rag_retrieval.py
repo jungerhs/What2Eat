@@ -694,6 +694,13 @@ class GraphRAGRetrieval:
             reasoning_chains=[]
         )
     
+    def refresh_cache(self):
+        """清空并重建实体/关系缓存（增量更新后调用）"""
+        self.entity_cache.clear()
+        self.relation_cache.clear()
+        self._build_graph_index()
+        logger.info(f"GraphRAG 缓存已刷新: {len(self.entity_cache)} 实体, {len(self.relation_cache)} 关系类型")
+
     def close(self):
         """关闭资源连接"""
         if hasattr(self, 'driver') and self.driver:
