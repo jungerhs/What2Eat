@@ -1,7 +1,7 @@
 {
   "kimi": {
-    "api_key": "***REMOVED***",
-    "base_url": "https://api.deepseek.com",
+    "api_key": "",
+    "base_url": "",
     "model": "deepseek-v4-flash",
     "max_retries": 3,
     "timeout": 30
