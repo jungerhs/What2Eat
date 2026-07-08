@@ -233,8 +233,8 @@ class MilvusIndexConstructionModule:
             # 2. 准备数据
             logger.info("正在生成向量embeddings...")
             texts = [chunk.page_content for chunk in chunks]
-            vectors = self.embeddings.embed_documents(texts)
-            
+            vectors = self.embeddings.embed_documents(texts)#批量生成向量
+           
             # 3. 准备插入数据
             entities = []
             for i, (chunk, vector) in enumerate(zip(chunks, vectors)):

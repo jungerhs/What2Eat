@@ -51,7 +51,12 @@ class GraphDataPreparationModule:
         self.recipes: List[GraphNode] = []
         self.ingredients: List[GraphNode] = []
         self.cooking_steps: List[GraphNode] = []
-        
+
+        # Phase 2: parent_id → 原始菜谱 Document 的索引。
+        # 由 build_recipe_documents() 自动构建；增量加载后可调用
+        # rebuild_parent_id_index() 重新同步。供粗粒度检索工具使用。
+        self.parent_id_to_doc: Dict[str, Document] = {}
+
         self._connect()
     
     def _connect(self):
@@ -353,19 +358,38 @@ class GraphDataPreparationModule:
                             "ingredients_count": len(ingredients_info),
                             "steps_count": len(steps_info),
                             "doc_type": "recipe",
-                            "content_length": len(full_content)
+                            "content_length": len(full_content) 
                         }
                     )
                     
                     documents.append(doc)
-                    
+
                 except Exception as e:
                     logger.warning(f"构建菜谱文档失败 {recipe_name} (ID: {recipe_id}): {e}")
                     continue
-        
+
         self.documents = documents
+        # 自动构建 parent_id → 原始 Document 的索引
+        self.rebuild_parent_id_index()
         logger.info(f"成功构建 {len(documents)} 个菜谱文档")
         return documents
+
+    def rebuild_parent_id_index(self) -> None:
+        """
+        从 self.documents 重建 parent_id → Document 索引。
+
+        用途：
+            * 增量加载文档后同步索引。
+            * 任何手动修改 self.documents 后重新生成索引。
+        """
+        self.parent_id_to_doc = {
+            doc.metadata.get("node_id"): doc
+            for doc in self.documents
+            if doc.metadata.get("node_id")
+        }
+        logger.debug(
+            f"parent_id 索引已重建: {len(self.parent_id_to_doc)} 个映射"
+        )
     
     def chunk_documents(self, chunk_size: int = 500, chunk_overlap: int = 50,
                         documents: Optional[List[Document]] = None) -> List[Document]:

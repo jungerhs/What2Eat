@@ -6,6 +6,7 @@
 
 import json
 import logging
+import time
 from typing import List, Dict, Tuple, Any
 from dataclasses import dataclass
 
@@ -547,20 +548,25 @@ class HybridRetrievalModule:
         混合检索：使用Round-robin轮询合并策略
         公平轮询合并不同检索结果，不使用权重配置
         """
-        logger.info(f"开始混合检索: {query}")
-        
+        logger.info(f"┌─[HYBRID SEARCH] query='{query[:60]}'")
+        t0 = time.time()
+
         # 1. 双层检索（实体+主题检索）
+        logger.info("│ [STEP 1] 双层检索 (实体+主题)")
         dual_docs = self.dual_level_retrieval(query, top_k)
-        
+        logger.info(f"│   → {len(dual_docs)} 个文档")
+
         # 2. 增强向量检索
+        logger.info("│ [STEP 2] 向量检索 (Milvus)")
         vector_docs = self.vector_search_enhanced(query, top_k)
-        
+        logger.info(f"│   → {len(vector_docs)} 个文档")
+
         # 3. Round-robin轮询合并
         merged_docs = []
         seen_doc_ids = set()
         max_len = max(len(dual_docs), len(vector_docs))
         origin_len = len(dual_docs) + len(vector_docs)
-        
+
         for i in range(max_len):
             # 先添加双层检索结果
             if i < len(dual_docs):
@@ -573,7 +579,7 @@ class HybridRetrievalModule:
                     # 设置统一的final_score字段
                     doc.metadata["final_score"] = doc.metadata.get("relevance_score", 0.0)
                     merged_docs.append(doc)
-            
+
             # 再添加向量检索结果
             if i < len(vector_docs):
                 doc = vector_docs[i]
@@ -588,12 +594,20 @@ class HybridRetrievalModule:
                     similarity_score = max(0.0, 1.0 - vector_score) if vector_score <= 1.0 else 0.0
                     doc.metadata["final_score"] = similarity_score
                     merged_docs.append(doc)
-        
+
         # 取前top_k个结果
         final_docs = merged_docs[:top_k]
-        
-        logger.info(f"Round-robin合并：从总共{origin_len}个结果合并为{len(final_docs)}个文档")
-        logger.info(f"混合检索完成，返回 {len(final_docs)} 个文档")
+
+        logger.info(f"│ [STEP 3] Round-robin 合并: {origin_len} → {len(final_docs)} 文档")
+        # 输出前 top_k 的得分和名字
+        for i, d in enumerate(final_docs[:min(5, len(final_docs))], 1):
+            name = d.metadata.get("recipe_name") or d.metadata.get("name") or d.metadata.get("node_id", "?")
+            score = d.metadata.get("final_score", 0)
+            method = d.metadata.get("search_method", "?")
+            logger.info(f"│   [{i}] score={score:.3f}  method={method}  name={name}")
+
+        logger.info(f"│ 混合检索完成，总耗时 {(time.time()-t0)*1000:.1f}ms")
+        logger.info(f"└─[HYBRID SEARCH] end")
         return final_docs
         
     def incremental_update(
