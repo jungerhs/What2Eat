@@ -1,0 +1,10 @@
+{
+  "total_sample": 454,
+  "agree": 415,
+  "disagree": 39,
+  "fail": 0,
+  "agreement": 0.9141,
+  "threshold": 0.85,
+  "pass": true,
+  "disputed_count": 39
+}

@@ -1,0 +1,42 @@
+# 训练超参（与 config.py 里的 label 等保持一致）
+
+# ===== 模型 =====
+model_name: hfl/chinese-roberta-wwm-ext
+max_length: 64
+num_labels: 4
+
+# ===== 训练 =====
+training:
+  lr: 2.0e-5
+  batch_size: 32
+  eval_batch_size: 64
+  epochs: 5
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  label_smoothing: 0.1
+  fp16: auto           # auto=有 cuda 自动开, true=强制开, false=关
+  grad_accum_steps: 1
+  max_grad_norm: 1.0
+  early_stopping:
+    patience: 2
+    metric: eval_macro_f1
+    greater_is_better: true
+  seeds: [42, 123, 1024]
+
+# ===== 评估 =====
+eval:
+  batch_size: 64
+  save_confusion: true
+  top_k: 2
+
+# ===== 路径（可被 CLI 覆盖） =====
+paths:
+  processed_dir: data/processed
+  train_file: train.jsonl
+  dev_file: dev.jsonl
+  test_file: test.jsonl
+  label_map: label_map.json
+  out_of_domain: out_of_domain.jsonl
+  models_dir: models
+  reports_dir: reports
+  best_model_subdir: best

@@ -45,3 +45,9 @@ Desktop.ini
 data/**/data/
 data/**/logs/
 data/**/import/
+
+# Classifier: trained model weights + training artifacts (regenerable, models/ is ~8GB)
+code/classfier/models/
+code/classfier/reports/
+code/classfier/logs/
+code/classfier/experiments/
