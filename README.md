@@ -8,7 +8,13 @@
 
 ## 🎬 Demo
 
-<video src="docs/demo/what2eat-demo.mp4" controls width="100%"></video>
+
+
+https://github.com/user-attachments/assets/06a83897-610d-4180-b72b-3b5cacabb401
+
+
+
+
 
 ---
 
