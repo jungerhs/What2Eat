@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>C9 尝尝咸淡 - AI 食谱问答助手</title>
+<title>What2Eat - AI 食谱问答助手</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -140,15 +140,15 @@ tailwind.config = {
 <!-- ====== NAVIGATION ====== -->
 <nav class="fixed top-4 left-4 right-4 z-50" aria-label="主导航">
   <div class="max-w-6xl mx-auto glass-strong rounded-2xl px-6 py-3.5 flex items-center justify-between">
-    <a href="#" class="flex items-center gap-2.5 no-underline" aria-label="C9 首页">
+    <a href="#" class="flex items-center gap-2.5 no-underline" aria-label="What2Eat 首页">
       <span class="text-2xl">🥢</span>
-      <span class="font-semibold text-lg text-warm-900">C9 <span class="text-brand-500 font-light">尝尝咸淡</span></span>
+      <span class="font-semibold text-lg text-warm-900">What2Eat <span class="text-brand-500 font-light">尝尝咸淡</span></span>
     </a>
     <div class="hidden md:flex items-center gap-8 text-sm font-medium text-warm-800">
       <a href="#features" class="hover:text-brand-500 transition-colors duration-200 cursor-pointer">功能特性</a>
       <a href="#how-it-works" class="hover:text-brand-500 transition-colors duration-200 cursor-pointer">工作原理</a>
-      <a href="app.html" class="px-5 py-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors duration-200 cursor-pointer shadow-md shadow-brand-500/25">
-        开始使用
+      <a href="auth.html" class="px-5 py-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors duration-200 cursor-pointer shadow-md shadow-brand-500/25">
+        登录 / 注册
       </a>
     </div>
     <!-- Mobile menu button -->
@@ -160,7 +160,7 @@ tailwind.config = {
   <div id="mobile-menu" class="hidden md:hidden mt-3 glass-strong rounded-2xl px-6 py-4 flex flex-col gap-3 text-sm font-medium text-warm-800">
     <a href="#features" class="py-2 hover:text-brand-500 transition-colors duration-200 cursor-pointer">功能特性</a>
     <a href="#how-it-works" class="py-2 hover:text-brand-500 transition-colors duration-200 cursor-pointer">工作原理</a>
-    <a href="app.html" class="py-2.5 px-5 bg-brand-500 text-white rounded-xl text-center hover:bg-brand-600 transition-colors duration-200 cursor-pointer">开始使用</a>
+    <a href="auth.html" class="py-2.5 px-5 bg-brand-500 text-white rounded-xl text-center hover:bg-brand-600 transition-colors duration-200 cursor-pointer">登录 / 注册</a>
   </div>
 </nav>
 
@@ -183,14 +183,14 @@ tailwind.config = {
       </h1>
 
       <p class="text-lg md:text-xl text-warm-800/80 leading-relaxed mb-10 max-w-2xl mx-auto">
-        C9 尝咸淡是一款基于知识图谱和 AI 的智能食谱问答助手。<br class="hidden sm:block">
+        What2Eat 尝咸淡是一款基于知识图谱和 AI 的智能食谱问答助手。<br class="hidden sm:block">
         搭载 RAG 检索增强引擎，为你提供精准、专业的中餐烹饪指导。
       </p>
 
       <!-- CTA Buttons -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-        <a href="app.html" class="w-full sm:w-auto px-8 py-4 bg-brand-500 text-white font-semibold rounded-2xl hover:bg-brand-600 active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-lg shadow-brand-500/30 text-lg">
-          立即体验
+        <a href="auth.html" class="w-full sm:w-auto px-8 py-4 bg-brand-500 text-white font-semibold rounded-2xl hover:bg-brand-600 active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-lg shadow-brand-500/30 text-lg">
+          立即登录
         </a>
         <a href="#features" class="w-full sm:w-auto px-8 py-4 glass-strong text-warm-800 font-semibold rounded-2xl hover:bg-white/80 transition-all duration-200 cursor-pointer text-lg">
           了解更多
@@ -225,7 +225,7 @@ tailwind.config = {
       <h2 id="features-heading" class="text-3xl sm:text-4xl font-bold mb-4">智能烹饪，从「问」开始</h2>
       <div class="section-divider mb-6"></div>
       <p class="text-lg text-warm-800/75 max-w-2xl mx-auto">
-        C9 将 AI 大模型与知识图谱深度融合，让每道菜的疑问都能得到精准回答
+        What2Eat 将 AI 大模型与知识图谱深度融合，让每道菜的疑问都能得到精准回答
       </p>
     </div>
 
@@ -273,7 +273,7 @@ tailwind.config = {
       <h2 id="how-heading" class="text-3xl sm:text-4xl font-bold mb-4">三步，轻松掌握烹饪之道</h2>
       <div class="section-divider mb-6"></div>
       <p class="text-lg text-warm-800/75 max-w-2xl mx-auto">
-        从菜谱解析到智能问答，C9 用 AI 让烹饪变得更简单
+        从菜谱解析到智能问答，What2Eat 用 AI 让烹饪变得更简单
       </p>
     </div>
 
@@ -381,7 +381,7 @@ tailwind.config = {
     <div class="glass rounded-2xl px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-warm-800/60">
       <div class="flex items-center gap-2">
         <span class="text-lg">🥢</span>
-        <span>C9 尝尝咸淡 — AI 驱动的中餐食谱知识图谱问答系统</span>
+        <span>What2Eat 尝尝咸淡 — AI 驱动的中餐食谱知识图谱问答系统</span>
       </div>
       <div class="flex items-center gap-6">
         <span>Python 3.12+</span>

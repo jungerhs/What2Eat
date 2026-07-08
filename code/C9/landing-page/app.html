@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>C9 尝咸淡 - AI 食谱问答</title>
+<title>What2Eat - AI 食谱问答</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -100,17 +102,174 @@ tailwind.config = {
   .toast-enter { animation: slide-in 0.3s ease-out; }
 
   /* ── Message markdown ── */
-  .msg-content p { margin-bottom: 0.5rem; }
-  .msg-content p:last-child { margin-bottom: 0; }
-  .msg-content strong { color: #2B1F0F; font-weight: 600; }
-  .msg-content ul, .msg-content ol { margin: 0.25rem 0; padding-left: 1.25rem; }
-  .msg-content li { margin-bottom: 0.15rem; }
-  .msg-content code {
-    background: rgba(232,93,58,0.08); padding: 1px 5px; border-radius: 4px;
-    font-family: 'SF Mono', 'JetBrains Mono', monospace; font-size: 0.875em;
-  }
+.msg-content { font-size: 0.9rem; line-height: 1.75; color: #3D2B0F; }
+.msg-content > *:first-child { margin-top: 0; }
+.msg-content > *:last-child { margin-bottom: 0; }
+.msg-content p { margin: 0.45rem 0; }
+.msg-content strong { color: #2B1F0F; font-weight: 700; }
+.msg-content em { color: #6B4423; font-style: italic; }
+.msg-content del { color: #B8A88A; }
+.msg-content a { color: #E85D3A; text-decoration: none; border-bottom: 1px solid rgba(232,93,58,0.4); }
+.msg-content a:hover { border-bottom-color: #E85D3A; }
 
-  /* ─ Responsive sidebar toggle ── */
+/* 标题分级 */
+.msg-content h1, .msg-content h2, .msg-content h3, .msg-content h4, .msg-content h5, .msg-content h6 {
+  font-weight: 700; color: #2B1F0F; margin: 0.9rem 0 0.4rem; line-height: 1.4;
+}
+.msg-content h1 { font-size: 1.25rem; padding-bottom: 0.35rem; border-bottom: 2px solid #E85D3A; }
+.msg-content h2 { font-size: 1.1rem; padding-bottom: 0.25rem; border-bottom: 1px solid rgba(232,93,58,0.3); }
+.msg-content h3 { font-size: 1.05rem; color: #B8341A; margin-top: 1.1rem; padding-left: 0.5rem; border-left: 3px solid #E85D3A; background: rgba(232,93,58,0.06); padding: 0.35rem 0.6rem; border-radius: 0 6px 6px 0; }
+.msg-content h4 { font-size: 0.95rem; color: #6B4423; }
+.msg-content h5, .msg-content h6 { font-size: 0.875rem; color: #6B4423; }
+
+/* 分隔线 */
+.msg-content hr {
+  border: 0; height: 1px; margin: 0.85rem 0;
+  background: linear-gradient(to right, transparent, rgba(232,93,58,0.35), transparent);
+}
+
+/* 列表 */
+.msg-content ul, .msg-content ol { margin: 0.4rem 0; padding-left: 1.4rem; }
+.msg-content ul { list-style: none; }
+.msg-content ul > li { position: relative; padding-left: 0.15rem; margin: 0.2rem 0; }
+.msg-content ul > li::before {
+  content: '•'; color: #E85D3A; font-weight: 700; position: absolute;
+  left: -1rem; top: 0;
+}
+.msg-content ol > li { padding-left: 0.15rem; margin: 0.2rem 0; }
+.msg-content ol > li::marker { color: #E85D3A; font-weight: 700; }
+.msg-content li > p { margin: 0.1rem 0; }
+.msg-content li > ul, .msg-content li > ol { margin: 0.15rem 0; }
+
+/* 引用块 */
+.msg-content blockquote {
+  margin: 0.55rem 0; padding: 0.5rem 0.85rem;
+  background: rgba(232,93,58,0.06);
+  border-left: 3px solid #E85D3A;
+  border-radius: 0 6px 6px 0;
+  color: #6B4423;
+  font-style: italic;
+}
+.msg-content blockquote p { margin: 0.2rem 0; }
+
+/* 行内代码 / 代码块 */
+.msg-content code {
+  background: rgba(232,93,58,0.1); padding: 1px 6px; border-radius: 4px;
+  font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', monospace; font-size: 0.85em;
+  color: #B8341A;
+}
+.msg-content pre {
+  margin: 0.6rem 0; padding: 0.7rem 0.9rem;
+  background: #2B1F0F; color: #F5E6D3;
+  border-radius: 8px; overflow-x: auto;
+  font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', monospace; font-size: 0.8rem;
+  line-height: 1.55;
+}
+.msg-content pre code { background: transparent; padding: 0; color: inherit; font-size: inherit; }
+
+/* 表格 */
+.msg-content table {
+  border-collapse: collapse; width: 100%; margin: 0.6rem 0;
+  font-size: 0.85rem;
+  background: rgba(255,255,255,0.5);
+  border-radius: 6px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(180,100,60,0.08);
+}
+.msg-content th, .msg-content td { padding: 0.45rem 0.7rem; text-align: left; border-bottom: 1px solid rgba(232,93,58,0.15); }
+.msg-content th { background: rgba(232,93,58,0.08); color: #B8341A; font-weight: 600; }
+.msg-content tr:last-child td { border-bottom: 0; }
+
+/* 任务列表 */
+.msg-content input[type="checkbox"] { margin-right: 0.35rem; accent-color: #E85D3A; }
+
+/* 强调 emoji（让 ⭐/🍽/🌶 这类原样显示） */
+.msg-content { word-wrap: break-word; overflow-wrap: anywhere; }
+
+/* 菜品链接（带图/无图两种样式）——继承所在元素颜色，用下划线 + 背景提示可点击 */
+.msg-content .dish-link {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  border-bottom: 1.5px dashed currentColor;
+  padding: 0 1px;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.msg-content .dish-link:hover {
+  background: rgba(232,93,58,0.12);
+  border-bottom-style: solid;
+  border-bottom-width: 1.5px;
+}
+.msg-content .dish-link--noimg {
+  border-bottom: 1.5px dotted rgba(107,68,35,0.5);
+  cursor: help;
+}
+.msg-content .dish-link--noimg:hover {
+  background: rgba(107,68,35,0.06);
+  border-bottom-style: dotted;
+}
+
+  /* 菜品图片悬停预览 */
+#dish-preview {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  background: white;
+  border: 2px solid rgba(232,93,58,0.4);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(180,100,60,0.35), 0 4px 12px rgba(232,93,58,0.2);
+  padding: 12px;
+  max-width: 920px;
+  opacity: 0;
+  transform: translateY(8px) scale(0.92);
+  transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+#dish-preview.visible { opacity: 1; transform: translateY(0) scale(1); }
+#dish-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  max-height: 760px;
+  object-fit: cover;
+}
+#dish-preview .pv-caption {
+  font-size: 1rem;
+  color: #B8341A;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 8px;
+  padding: 0 2px;
+}
+#dish-preview .pv-loading {
+  width: 720px;
+  height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #B8A88A;
+  font-size: 1.1rem;
+}
+#dish-preview .pv-error {
+  width: 720px;
+  padding: 24px;
+  text-align: center;
+  color: #B8341A;
+  font-size: 1.1rem;
+}
+
+/* 菜品链接 hover 时，所在聊天气泡背景虚化 */
+.ai-message.dim-bg {
+  filter: blur(4px) saturate(0.7);
+  transition: filter 0.2s ease;
+}
+/* 关闭虚化气球的过渡，让浮层先出现再虚化（避免一开始就糊） */
+.ai-message:not(.dim-bg) {
+  transition: filter 0.2s ease;
+}
+
+/* ─ Responsive sidebar toggle ── */
   @media (max-width: 1023px) {
     #stats-sidebar { display: none; }
     #stats-sidebar.open { display: block; }
@@ -154,6 +313,21 @@ tailwind.config = {
   #message-list::-webkit-scrollbar-track { background: transparent; }
   #message-list::-webkit-scrollbar-thumb { background: rgba(180,100,60,0.2); border-radius: 10px; }
   #message-list::-webkit-scrollbar-thumb:hover { background: rgba(180,100,60,0.35); }
+
+  /* ── Stream toggle button (bottom-right) ── */
+  .stream-toggle-btn {
+    background: rgba(255,255,255,0.4);
+    color: rgba(101,79,51,0.55);
+    border: 1px solid rgba(180,100,60,0.12);
+  }
+  .stream-toggle-btn:hover { background: rgba(255,255,255,0.65); }
+  .stream-toggle-btn[data-stream="on"] {
+    background: #FFE8DD;
+    color: #B33518;
+    border-color: #FFB08A;
+    box-shadow: 0 2px 8px rgba(232,93,58,0.18);
+  }
+  .stream-toggle-btn[data-stream="on"]:hover { background: #FFCFB8; }
 </style>
 </head>
 <body class="min-h-screen text-warm-900 bg-mesh relative">
@@ -161,9 +335,9 @@ tailwind.config = {
 <!-- ====== NAV ====== -->
 <nav class="fixed top-3 left-3 right-3 z-50" aria-label="主导航">
   <div class="max-w-7xl mx-auto glass-strong rounded-2xl px-4 sm:px-6 py-3 flex items-center justify-between">
-    <a href="index.html" class="flex items-center gap-2.5 no-underline shrink-0" aria-label="C9 首页">
+    <a href="index.html" class="flex items-center gap-2.5 no-underline shrink-0" aria-label="What2Eat 首页">
       <span class="text-xl sm:text-2xl">🥢</span>
-      <span class="font-semibold text-base sm:text-lg text-warm-900">C9 <span class="text-brand-500 font-light">尝咸淡</span></span>
+      <span class="font-semibold text-base sm:text-lg text-warm-900">What2Eat <span class="text-brand-500 font-light">尝咸淡</span></span>
     </a>
     <div class="flex items-center gap-2 sm:gap-3">
       <!-- Stats toggle (mobile) -->
@@ -172,6 +346,13 @@ tailwind.config = {
       </button>
       <!-- Connection status dot -->
       <span id="conn-dot" class="w-2 h-2 rounded-full bg-yellow-400" title="连接状态"></span>
+      <!-- 用户名 + 登出 -->
+      <span class="hidden sm:inline text-sm text-warm-800/70 font-medium" title="当前登录用户">
+        👤 <span id="nav-username">--</span>
+      </span>
+      <button onclick="logout()" class="text-xs px-2.5 py-1.5 rounded-lg bg-white/50 hover:bg-white/80 text-warm-800/70 hover:text-brand-600 transition-colors duration-200 cursor-pointer border border-warm-800/10" title="登出">
+        登出
+      </button>
       <a href="index.html" class="hidden sm:flex items-center gap-1 text-sm text-warm-800/60 hover:text-brand-500 transition-colors duration-200 cursor-pointer">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         返回首页
@@ -192,7 +373,7 @@ tailwind.config = {
       <div class="px-4 sm:px-6 py-3 border-b border-warm-800/8 flex items-center gap-3 shrink-0">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400/20 to-gold-400/20 flex items-center justify-center text-lg">🥢</div>
         <div>
-          <div class="text-sm font-semibold text-warm-900">C9 尝咸淡</div>
+          <div class="text-sm font-semibold text-warm-900">What2Eat 尝咸淡</div>
           <div class="text-xs text-warm-800/50 flex items-center gap-1">
             <span id="chat-status-dot" class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
             <span id="chat-status-text">连接中...</span>
@@ -205,7 +386,7 @@ tailwind.config = {
         <!-- Welcome card -->
         <div id="welcome-card" class="flex flex-col items-center justify-center h-full text-center py-8">
           <div class="text-5xl sm:text-6xl mb-4">🥢</div>
-          <h2 class="text-lg sm:text-xl font-semibold mb-2 text-warm-900">欢迎使用 C9 尝咸淡</h2>
+          <h2 class="text-lg sm:text-xl font-semibold mb-2 text-warm-900">欢迎使用 What2Eat 尝咸淡</h2>
           <p class="text-sm sm:text-base text-warm-800/60 mb-6 max-w-md">我是你的 AI 烹饪助手，基于知识图谱为你提供专业的中餐指导</p>
           <div class="flex flex-wrap justify-center gap-2">
             <button class="glass rounded-full px-4 py-2 cursor-pointer hover:bg-white/80 transition-all duration-200 text-xs sm:text-sm text-warm-800/70 font-medium hover:text-brand-600 hover:shadow-md" onclick="sendPreset('鱼香肉丝怎么做？')">鱼香肉丝怎么做？</button>
@@ -227,12 +408,16 @@ tailwind.config = {
             onkeydown="handleKeyDown(event)"
           ></textarea>
           <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <!-- Stream toggle -->
-            <label class="flex items-center gap-1.5 cursor-pointer text-xs text-warm-800/50 select-none hover:text-warm-800/70 transition-colors" title="流式响应">
-              <input type="checkbox" id="stream-toggle" checked class="sr-only peer">
-              <span class="w-8 h-4.5 rounded-full bg-warm-800/10 peer-checked:bg-brand-400/50 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:w-3.5 after:h-3.5 after:transition-transform peer-checked:after:translate-x-3.5 after:shadow-sm"></span>
-              流式
-            </label>
+            <!-- Stream toggle (bottom-right) -->
+            <button id="stream-toggle" type="button" data-stream="on" onclick="toggleStream()"
+              class="stream-toggle-btn px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all duration-200 cursor-pointer shrink-0"
+              aria-label="切换流式响应" aria-pressed="true"
+              title="点击切换流式响应">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <span>流式</span>
+            </button>
             <!-- Send button -->
             <button id="send-btn" onclick="sendMessage()"
               class="px-4 sm:px-5 py-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-600 active:scale-95 transition-all duration-200 cursor-pointer shadow-md shadow-brand-500/25 hover:shadow-lg hover:shadow-brand-500/30 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -285,25 +470,19 @@ tailwind.config = {
         </div>
       </div>
 
-      <!-- Routing distribution -->
-      <div class="rounded-2xl p-4 bg-white/40">
-        <h3 class="text-sm font-semibold text-warm-800/80 mb-3 flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-          检索策略分布
+      <!-- 用户记忆 (Phase 5) -->
+      <div class="rounded-2xl p-4 bg-white/40" id="memory-card">
+        <h3 class="text-sm font-semibold text-warm-800/80 mb-3 flex items-center justify-between gap-2">
+          <span class="flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            我的记忆
+          </span>
+          <button onclick="fetchUserProfile()" title="刷新记忆" class="p-1 rounded hover:bg-warm-800/10 transition-colors cursor-pointer">
+            <svg class="w-3.5 h-3.5 text-warm-800/40" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
         </h3>
-        <div class="space-y-2 text-xs sm:text-sm">
-          <div>
-            <div class="flex justify-between mb-0.5"><span class="text-warm-800/60">传统混合</span><span id="stat-trad" class="text-brand-500 font-medium">--</span></div>
-            <div class="h-1.5 rounded-full bg-warm-800/10 overflow-hidden"><div id="bar-trad" class="h-full rounded-full bg-brand-400" style="width:0%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between mb-0.5"><span class="text-warm-800/60">图 RAG</span><span id="stat-graph" class="text-purple-500 font-medium">--</span></div>
-            <div class="h-1.5 rounded-full bg-warm-800/10 overflow-hidden"><div id="bar-graph" class="h-full rounded-full bg-purple-400" style="width:0%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between mb-0.5"><span class="text-warm-800/60">组合策略</span><span id="stat-combined" class="text-teal-500 font-medium">--</span></div>
-            <div class="h-1.5 rounded-full bg-warm-800/10 overflow-hidden"><div id="bar-combined" class="h-full rounded-full bg-teal-400" style="width:0%"></div></div>
-          </div>
+        <div id="memory-content">
+          <div class="text-xs text-warm-800/40 text-center py-2">加载中…</div>
         </div>
       </div>
 
@@ -364,7 +543,21 @@ const state = {
   rebuildConfirm: false,
   uploadedFiles: [],
   isProcessing: false,
+  // ── 登录态：user_id + token（来自登录/注册接口） ──
+  userId: localStorage.getItem('c9_user_id') || null,
+  username: localStorage.getItem('c9_username') || '',
+  token: localStorage.getItem('c9_token') || null,
+  // ── 会话 ID：每次进入 chat 页面都生成新的，关闭页面（unload）就清掉 ──
+  sessionId: sessionStorage.getItem('c9_session_id') || (() => {
+    const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    sessionStorage.setItem('c9_session_id', id);
+    return id;
+  })(),
 };
+// 关闭页面即销毁当前会话（pagehide 兼容移动端/PC）
+window.addEventListener('pagehide', () => {
+  sessionStorage.removeItem('c9_session_id');
+});
 
 // ═══════════════ Utilities ═══════════════
 function $(id) { return document.getElementById(id); }
@@ -375,6 +568,40 @@ function escapeHtml(str) {
 }
 function now() { return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }); }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// 带 JWT 的 fetch：401 时自动跳登录页
+async function authFetch(url, options = {}) {
+  const headers = options.headers ? { ...options.headers } : {};
+  if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+  options.headers = headers;
+  const res = await fetch(url, options);
+  if (res.status === 401 && !url.includes('/api/auth/')) {
+    // token 失效 → 清掉本地登录态并跳登录页
+    localStorage.removeItem('c9_token');
+    localStorage.removeItem('c9_user_id');
+    localStorage.removeItem('c9_username');
+    showToast('登录已过期，请重新登录', 'error');
+    setTimeout(() => { window.location.href = 'auth.html'; }, 800);
+    throw new Error('unauthorized');
+  }
+  return res;
+}
+
+function logout() {
+  localStorage.removeItem('c9_token');
+  localStorage.removeItem('c9_user_id');
+  localStorage.removeItem('c9_username');
+  sessionStorage.removeItem('c9_session_id');
+  window.location.href = 'auth.html';
+}
+
+// 启动时强校验：未登录直接跳走
+if (!state.token || !state.userId) {
+  window.location.href = 'auth.html';
+}
+
+// 加载菜品图片索引（用于把模型回复中的菜名变成可点击链接）
+loadDishIndex();
 
 // ═══════════════ Toast ═══════════════
 function showToast(msg, type = 'info') {
@@ -393,6 +620,21 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 128) + 'px';
 }
 
+// ═══════════════ Stream toggle (bottom-right button) ═══════════════
+function toggleStream() {
+  const btn = $('stream-toggle');
+  const isOn = btn.dataset.stream === 'on';
+  const next = isOn ? 'off' : 'on';
+  btn.dataset.stream = next;
+  btn.setAttribute('aria-pressed', String(next === 'on'));
+  btn.title = next === 'on' ? '流式响应已开启，点击关闭' : '流式响应已关闭，点击开启';
+}
+
+function isStreamEnabled() {
+  const btn = $('stream-toggle');
+  return btn && btn.dataset.stream === 'on';
+}
+
 // ═══════════════ Sidebar toggle (mobile) ═══════════════
 function toggleSidebar() {
   $('stats-sidebar').classList.toggle('open');
@@ -401,7 +643,7 @@ function toggleSidebar() {
 // ═══════════════ Connection check ═══════════════
 async function checkHealth() {
   try {
-    const res = await fetch(`${API}/api/health`);
+    const res = await authFetch(`${API}/api/health`);
     if (res.ok) {
       const data = await res.json();
       state.connectionStatus = data.status; // 'ok' | 'initializing' | 'error'
@@ -412,7 +654,10 @@ async function checkHealth() {
     state.connectionStatus = 'error';
   }
   updateConnectionDot();
-  if (state.connectionStatus === 'ok') fetchStats();
+  if (state.connectionStatus === 'ok') {
+    fetchStats();
+    fetchUserProfile();
+  }
 }
 
 function updateConnectionDot() {
@@ -440,7 +685,7 @@ function updateConnectionDot() {
 // ═══════════════ Stats ═══════════════
 async function fetchStats() {
   try {
-    const res = await fetch(`${API}/api/stats`);
+    const res = await authFetch(`${API}/api/stats`);
     if (!res.ok) return;
     const data = await res.json();
     $('stat-queries').textContent = data.routing.total_queries;
@@ -449,47 +694,315 @@ async function fetchStats() {
     $('stat-steps').textContent = data.knowledge_base.total_cooking_steps;
     $('stat-chunks').textContent = data.knowledge_base.total_chunks;
     $('stat-vectors').textContent = data.knowledge_base.vector_count;
-
-    // Routing bars
-    const total = data.routing.total_queries;
-    if (total > 0) {
-      const tPct = Math.round(data.routing.traditional_count / total * 100);
-      const gPct = Math.round(data.routing.graph_rag_count / total * 100);
-      const cPct = Math.round(data.routing.combined_count / total * 100);
-      $('stat-trad').textContent = `${tPct}%`;
-      $('stat-graph').textContent = `${gPct}%`;
-      $('stat-combined').textContent = `${cPct}%`;
-      $('bar-trad').style.width = `${tPct}%`;
-      $('bar-graph').style.width = `${gPct}%`;
-      $('bar-combined').style.width = `${cPct}%`;
-    }
   } catch {
     // 静默失败
   }
 }
 
+// ═══════════════ User Memory (Phase 5) ═══════════════
+async function fetchUserProfile() {
+  const el = $('memory-content');
+  if (!el) return;
+  el.innerHTML = '<div class="text-xs text-warm-800/40 text-center py-2">加载中…</div>';
+  try {
+    // 不再传 user_id：依赖 JWT（authFetch 自动带 Authorization header）
+    const url = `${API}/api/user/profile`;
+    const res = await authFetch(url);
+    if (!res.ok) throw new Error('请求失败');
+    const data = await res.json();
+
+    if (!data.profile) {
+      el.innerHTML = `<div class="text-xs text-warm-800/40 text-center py-2">${data.message || '暂无记忆'}</div>`;
+      return;
+    }
+
+    const prefs = data.profile.preferences || data.profile;
+    const items = [];
+
+    const tag = (label, values) => {
+      if (!values || (Array.isArray(values) && values.length === 0)) return '';
+      const vals = Array.isArray(values) ? values : [values];
+      return `
+        <div class="mb-2">
+          <span class="text-xs text-warm-800/50 font-medium">${label}</span>
+          <div class="flex flex-wrap gap-1 mt-0.5">
+            ${vals.map(v => `<span class="inline-block px-1.5 py-0.5 rounded-full text-xs bg-brand-50 text-brand-600 border border-brand-100">${escapeHtml(v)}</span>`).join('')}
+          </div>
+        </div>`;
+    };
+
+    const html = [
+      tag('🍽️ 偏好菜系', prefs.cuisine_preferences),
+      tag('🌶️ 口味偏好', prefs.taste_preferences),
+      tag('🚫 忌口', prefs.avoid),
+      tag('🍳 烹饪水平', prefs.skill_level ? [prefs.skill_level] : []),
+      tag('📋 饮食限制', prefs.dietary_restrictions),
+      tag('🔧 厨房设备', prefs.kitchen_equipment),
+      tag('❤️ 喜欢的菜', prefs.favorite_dishes),
+      tag('🔎 最近问过', prefs.recently_asked ? prefs.recently_asked.slice(-5) : []),
+    ].filter(Boolean).join('');
+
+    el.innerHTML = html || '<div class="text-xs text-warm-800/40 text-center py-2">记忆正在形成中…</div>';
+  } catch {
+    el.innerHTML = '<div class="text-xs text-warm-800/40 text-center py-2">加载失败</div>';
+  }
+}
+
 // ═══════════════ Messages ═══════════════
+// ═══════════════ 菜品图片索引 ═══════════════
+// 全局菜名→图片 URL 缓存（启动时从 /api/dish-images 拉取）
+const DISH_INDEX = { images: new Map(), all: new Set(), loaded: false };
+
+async function loadDishIndex() {
+  try {
+    const res = await authFetch(`${API}/api/dish-images`);
+    if (!res.ok) return;
+    const data = await res.json();
+    DISH_INDEX.all = new Set(data.dishes || []);
+    DISH_INDEX.images = new Map(Object.entries(data.images || {}));
+    DISH_INDEX.loaded = true;
+    console.info(`[dish-index] 已加载: 全集 ${DISH_INDEX.all.size} 道, 有图 ${DISH_INDEX.images.size} 道`);
+  } catch (e) {
+    console.warn('[dish-index] 加载失败', e);
+  }
+}
+
+// ═══════════════ 菜品图片悬停预览 ═══════════════
+// 单例浮层，跟随鼠标；DOM 事件委托监听所有 .dish-link
+(function setupDishPreview() {
+  // 1) 注入浮层 DOM
+  const pv = document.createElement('div');
+  pv.id = 'dish-preview';
+  pv.innerHTML = '<div class="pv-loading">加载中…</div>';
+  document.body.appendChild(pv);
+
+  let currentDish = null;   // 当前预览的菜名（防止快速 hover 多个时互相覆盖）
+  let currentImg = null;    // 当前正在加载的 <img>
+
+  function showPreview(src, dish, x, y) {
+    if (currentDish !== dish) {
+      currentDish = dish;
+      pv.innerHTML = '<div class="pv-loading">加载中…</div>';
+    }
+    pv.classList.add('visible');
+    positionPreview(x, y);
+
+    // 图片已就绪（缓存命中）则不再加载
+    const existing = pv.querySelector('img');
+    if (existing && existing.dataset.src === src && existing.complete && existing.naturalWidth > 0) {
+      return;
+    }
+
+    const img = new Image();
+    img.dataset.src = src;
+    img.alt = dish;
+    currentImg = img;
+    img.onload = () => {
+      // 只在仍是当前菜时更新 DOM
+      if (currentDish === dish) {
+        pv.innerHTML = '';
+        pv.appendChild(img);
+        const cap = document.createElement('div');
+        cap.className = 'pv-caption';
+        cap.textContent = dish;
+        pv.appendChild(cap);
+      }
+    };
+    img.onerror = () => {
+      if (currentDish === dish) {
+        pv.innerHTML = `<div class="pv-error">图片加载失败<br>${escapeHtml(dish)}</div>`;
+      }
+    };
+    img.src = src;
+  }
+
+  function hidePreview() {
+    pv.classList.remove('visible');
+    currentDish = null;
+    // 解除所有 ai-message 的虚化状态
+    document.querySelectorAll('.ai-message.dim-bg').forEach(el => el.classList.remove('dim-bg'));
+    document.querySelectorAll('a.dish-link.is-previewing').forEach(el => el.classList.remove('is-previewing'));
+  }
+
+  function positionPreview(x, y) {
+    // 浮层显示在鼠标右下方，距边缘留 12px，避免贴边
+    const W = pv.offsetWidth || 240;
+    const H = pv.offsetHeight || 200;
+    const PAD = 12;
+    let nx = x + 16;
+    let ny = y + 16;
+    if (nx + W + PAD > window.innerWidth) nx = x - W - 16;
+    if (ny + H + PAD > window.innerHeight) ny = y - H - 16;
+    if (nx < PAD) nx = PAD;
+    if (ny < PAD) ny = PAD;
+    pv.style.left = nx + 'px';
+    pv.style.top = ny + 'px';
+  }
+
+  // 2) DOM 事件委托（document 上监听，一次绑定，永久生效）
+  document.addEventListener('mouseover', (e) => {
+    const a = e.target.closest('a.dish-link[data-src]');
+    if (!a) return;
+    // 给所在的 ai-message 加虚化 class（让背景模糊突出预览）
+    const msg = a.closest('.ai-message');
+    if (msg) {
+      // 清除其他气球的虚化，仅虚化当前
+      document.querySelectorAll('.ai-message.dim-bg').forEach(el => {
+        if (el !== msg) el.classList.remove('dim-bg');
+      });
+      msg.classList.add('dim-bg');
+    }
+    // 标记当前 hover 的菜名链接
+    document.querySelectorAll('a.dish-link.is-previewing').forEach(el => {
+      if (el !== a) el.classList.remove('is-previewing');
+    });
+    a.classList.add('is-previewing');
+    showPreview(a.dataset.src, a.dataset.dish, e.clientX, e.clientY);
+  });
+  document.addEventListener('mousemove', (e) => {
+    const a = e.target.closest('a.dish-link[data-src]');
+    if (!a) return;
+    // 只移动位置，不重新加载图片
+    positionPreview(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseout', (e) => {
+    const a = e.target.closest('a.dish-link[data-src]');
+    if (!a) return;
+    // relatedTarget 检查：鼠标移到当前 a 内部子元素不算离开
+    const next = e.relatedTarget;
+    if (next && a.contains(next)) return;
+    hidePreview();
+  });
+  // 触屏：点击预览一次（移动端友好）
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a.dish-link[data-src]');
+    if (!a) return;
+    // 仅在触屏或没按住修饰键时才阻止跳转；桌面端 ctrl/shift/cmd + 点击仍打开新标签
+    if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (!('ontouchstart' in window)) return;  // 桌面端不拦截
+    e.preventDefault();
+    showPreview(a.dataset.src, a.dataset.dish, e.clientX, e.clientY);
+  });
+})();
+
+// 把 [[菜名]] 替换成占位 token，避免被 marked 当成普通文本处理
+// 同时优先匹配「在 dishes 索引里的菜名」，保证匹配的真实性
+function prelinkDishNames(text) {
+  if (!text || !DISH_INDEX.loaded) return { text, tokens: [] };
+
+  // 按菜名长度从长到短排序，避免「酸辣」先于「酸辣土豆丝」被匹配
+  const names = [...DISH_INDEX.all].sort((a, b) => b.length - a.length);
+
+  // 一次扫描，按 token 顺序记录 (start, end, name) 用于后续还原
+  const tokens = [];
+  let result = '';
+  let i = 0;
+  let tokenIdx = 0;
+  const N = text.length;
+
+  // 工具函数：跳过已经被 [[]] 包裹的部分（避免嵌套）
+  const isInsideBrackets = (pos) => {
+    // 简单检查 pos 之前最近 30 个字符内是否有未闭合的 [[
+    const window = text.slice(Math.max(0, pos - 30), pos);
+    const opens = (window.match(/\[\[/g) || []).length;
+    const closes = (window.match(/\]\]/g) || []).length;
+    return opens > closes;
+  };
+
+  while (i < N) {
+    // 跳过已经存在的 [[...]]
+    if (text[i] === '[' && text[i + 1] === '[') {
+      const end = text.indexOf(']]', i + 2);
+      if (end !== -1) {
+        // 保留原文，但记录一个 token，让 linkify 阶段判断要不要加链接
+        const inner = text.slice(i + 2, end);
+        tokens.push({ idx: tokenIdx++, name: inner, hasBrackets: true });
+        result += `\u0001DISH${tokenIdx - 1}\u0002`;
+        i = end + 2;
+        continue;
+      }
+    }
+
+    // 在 text 节点中找菜名（要求前面不是字母/汉字，避免「鸡蛋」匹配到「番茄炒鸡蛋」子串）
+    let matched = null;
+    for (const name of names) {
+      if (i + name.length > N) continue;
+      if (text.slice(i, i + name.length) !== name) continue;
+      const prev = i > 0 ? text[i - 1] : '';
+      const next = i + name.length < N ? text[i + name.length] : '';
+      // 前后字符不能是汉字/字母（避免误匹配子串）
+      const isWordChar = (c) => /[一-鿿㐀-䶿a-zA-Z0-9]/.test(c);
+      if (isWordChar(prev) || isWordChar(next)) continue;
+      matched = name;
+      break;
+    }
+
+    if (matched) {
+      tokens.push({ idx: tokenIdx++, name: matched, hasBrackets: false });
+      result += `\u0001DISH${tokenIdx - 1}\u0002`;
+      i += matched.length;
+    } else {
+      result += text[i];
+      i++;
+    }
+  }
+  return { text: result, tokens };
+}
+
+// 把占位 token 还原成 <a class="dish-link"> 或纯文本
+function linkifyTokens(html, tokens) {
+  if (!tokens || tokens.length === 0) return html;
+  return html.replace(/\u0001DISH(\d+)\u0002/g, (m, n) => {
+    const idx = parseInt(n, 10);
+    const t = tokens[idx];
+    if (!t) return m;
+    const url = DISH_INDEX.images.get(t.name);
+    if (url) {
+      // 有图：渲染为可点击链接 + 悬停预览
+      // data-dish: 菜名（用于预览框 caption）
+      // data-src:  图片 URL（用于预览图，避免误读 href）
+      return `<a class="dish-link" href="${url}" target="_blank" rel="noopener noreferrer" data-dish="${t.name}" data-src="${url}">${t.name}</a>`;
+    }
+    // 没图但仍是真菜名：渲染为 span（保留菜名高亮但不可点）
+    return `<span class="dish-link dish-link--noimg">${t.name}</span>`;
+  });
+}
+
+// 完整 markdown 渲染：标题 / 列表 / 引用 / 表格 / 代码 / 加粗 / 斜体 / emoji / 菜品链接
 function renderMarkdown(text) {
-  // Simple markdown: **bold**, newlines, numbered lists
-  let html = escapeHtml(text);
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Split into paragraphs on double newline
-  const paras = html.split(/\n\n+/);
-  html = paras.map(p => {
-    const lines = p.split('\n');
-    // Check if this is a numbered list
-    if (lines.every((l, i) => /^\d+[\.\、\)]\s/.test(l.trimStart()))) {
-      const items = lines.map(l => `<li>${l.replace(/^\d+[\.\、\)]\s*/, '')}</li>`).join('');
-      return `<ol>${items}</ol>`;
-    }
-    // Check for bullet list
-    if (lines.every(l => /^[-•]\s/.test(l.trimStart()))) {
-      const items = lines.map(l => `<li>${l.replace(/^[-•]\s*/, '')}</li>`).join('');
-      return `<ul>${items}</ul>`;
-    }
-    return `<p>${lines.join('<br>')}</p>`;
-  }).join('');
-  return html;
+  if (!text) return '';
+  if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') {
+    // CDN 加载失败时的回退（极简渲染）
+    return `<p>${escapeHtml(text).replace(/\n/g, '<br>')}</p>`;
+  }
+  try {
+    // 每次调用前重新设置 marked，避免被全局污染
+    marked.setOptions({
+      gfm: true,
+      breaks: true,
+      smartypants: false,
+      pedantic: false,
+    });
+
+    // 阶段1: 把 [[菜名]] 或裸菜名替换成占位 token
+    const { text: preText, tokens } = prelinkDishNames(text);
+
+    // 阶段2: marked 解析
+    const raw = marked.parse(preText);
+
+    // 阶段3: 把 token 还原成 <a class="dish-link">
+    const linked = linkifyTokens(raw, tokens);
+
+    // 阶段4: DOMPurify 清洗（允许 dish-link 相关 class 和属性）
+    return DOMPurify.sanitize(linked, {
+      ADD_ATTR: ['target', 'rel', 'title'],
+      ADD_TAGS: ['span'],
+      FORBID_TAGS: ['style', 'iframe', 'form', 'input'],
+      FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick'],
+    });
+  } catch (e) {
+    return `<p>${escapeHtml(text).replace(/\n/g, '<br>')}</p>`;
+  }
 }
 
 const STRATEGY_LABELS = {
@@ -497,6 +1010,111 @@ const STRATEGY_LABELS = {
   graph_rag: { label: '图RAG', color: 'bg-purple-50 text-purple-600' },
   combined: { label: '组合策略', color: 'bg-teal-50 text-teal-600' },
 };
+
+const INTENT_LABELS = {
+  general:    { label: '常规问答', color: 'bg-emerald-50 text-emerald-600' },
+  detail:     { label: '细节查询', color: 'bg-sky-50 text-sky-600' },
+  recommend:  { label: '菜品推荐', color: 'bg-amber-50 text-amber-600' },
+  'multi-hop':{ label: '图RAG',    color: 'bg-purple-50 text-purple-600' },
+  unknown:    { label: '未识别',   color: 'bg-warm-100 text-warm-600' },
+};
+
+// 菜品图片索引：{菜名: URL}，启动时从 /api/dish-images 加载
+let DISH_IMAGE_MAP = {};
+// 按菜名长度倒序排列的长 key 列表，避免子串先匹配
+let DISH_KEYS_BY_LEN = [];
+
+async function loadDishImages() {
+  try {
+    const res = await fetch(`${API}/api/dish-images`);
+    if (!res.ok) return;
+    const data = await res.json();
+    DISH_IMAGE_MAP = data.images || {};
+    // 按长度倒序，便于后续正则用最长的 key 优先匹配
+    DISH_KEYS_BY_LEN = Object.keys(DISH_IMAGE_MAP).sort((a, b) => b.length - a.length);
+  } catch {
+    DISH_IMAGE_MAP = {};
+    DISH_KEYS_BY_LEN = [];
+  }
+}
+
+/**
+ * 把 sanitize 后的 HTML 文本节点里的菜名替换成可点击链接。
+ * 跳过已经在 <a> / <code> / <pre> / 已有 dish-link 内部的文本，避免重复包裹。
+ */
+function linkifyDishNames(html) {
+  if (!html || !DISH_KEYS_BY_LEN.length) return html;
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  const SKIP_TAGS = new Set(['A', 'CODE', 'PRE', 'SCRIPT', 'STYLE']);
+  const DISH_LINK_CLASS = 'dish-link';
+
+  const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      let p = node.parentNode;
+      while (p && p !== tpl.content) {
+        if (p.nodeType === 1) {
+          const tag = p.tagName;
+          if (SKIP_TAGS.has(tag)) return NodeFilter.FILTER_REJECT;
+          if (tag === 'SPAN' && p.classList && p.classList.contains(DISH_LINK_CLASS)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+        }
+        p = p.parentNode;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+
+  const toReplace = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const text = node.nodeValue;
+    if (!text) continue;
+    // 检查是否有任意菜名出现
+    let hasMatch = false;
+    for (const name of DISH_KEYS_BY_LEN) {
+      if (text.includes(name)) { hasMatch = true; break; }
+    }
+    if (!hasMatch) continue;
+    toReplace.push(node);
+  }
+
+  for (const node of toReplace) {
+    const text = node.nodeValue;
+    // 把文本按菜名边界切片，构造 fragments
+    const frag = document.createDocumentFragment();
+    let rest = text;
+    while (rest.length > 0) {
+      // 找出本段中最早出现的菜名
+      let earliest = -1;
+      let hitName = null;
+      for (const name of DISH_KEYS_BY_LEN) {
+        const idx = rest.indexOf(name);
+        if (idx >= 0 && (earliest === -1 || idx < earliest)) {
+          earliest = idx;
+          hitName = name;
+        }
+      }
+      if (hitName === null) {
+        frag.appendChild(document.createTextNode(rest));
+        break;
+      }
+      if (earliest > 0) frag.appendChild(document.createTextNode(rest.slice(0, earliest)));
+      const a = document.createElement('a');
+      a.href = DISH_IMAGE_MAP[hitName];
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.className = DISH_LINK_CLASS;
+      a.textContent = hitName;
+      a.title = `查看 ${hitName} 菜品图`;
+      frag.appendChild(a);
+      rest = rest.slice(earliest + hitName.length);
+    }
+    node.parentNode.replaceChild(frag, node);
+  }
+  return tpl.innerHTML;
+}
 
 function addUserMessage(text) {
   const id = 'msg-' + Date.now();
@@ -522,6 +1140,17 @@ function addAiMessage(id, html) {
   div.innerHTML = html;
   $('message-list').appendChild(div);
   scrollToBottom();
+}
+
+// 根据意图/策略生成头部徽标 HTML（流式优先用 intent，非流式回退到 strategy）
+function renderHeaderBadge(intentLabel, strategyKey, complexity) {
+  const intent = INTENT_LABELS[intentLabel];
+  if (intent) {
+    const cx = (typeof complexity === 'number') ? `  <span class="text-xs text-warm-800/40">复杂度 ${complexity.toFixed(2)}</span>` : '';
+    return `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${intent.color}">${intent.label}</span>${cx}`;
+  }
+  const s = STRATEGY_LABELS[strategyKey] || STRATEGY_LABELS.hybrid_traditional;
+  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${s.color}">${s.label}</span>`;
 }
 
 function scrollToBottom() {
@@ -574,7 +1203,7 @@ async function sendMessage(question) {
   state.isStreaming = true;
   $('send-btn').disabled = true;
 
-  const stream = $('stream-toggle').checked;
+  const stream = isStreamEnabled();
   if (stream) {
     await sendStreaming(q);
   } else {
@@ -590,10 +1219,10 @@ async function sendMessage(question) {
 async function sendNonStreaming(question) {
   const typingId = showTyping();
   try {
-    const res = await fetch(`${API}/api/chat`, {
+    const res = await authFetch(`${API}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, stream: false }),
+      body: JSON.stringify({ question, stream: false, session_id: state.sessionId, user_id: state.userId }),
     });
     removeElement(typingId);
 
@@ -606,14 +1235,12 @@ async function sendNonStreaming(question) {
 
     const data = await res.json();
     const strategy = data.analysis?.recommended_strategy || 'hybrid_traditional';
-    const s = STRATEGY_LABELS[strategy] || STRATEGY_LABELS.hybrid_traditional;
 
     addAiMessage('msg-' + Date.now(), `
       <div>
         <div class="ai-message">
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${s.color}">${s.label}</span>
-            <span class="text-xs text-warm-800/40">${data.response_time_ms?.toFixed(0) || '--'}ms</span>
+            ${renderHeaderBadge(null, strategy, null)}
           </div>
           <div class="msg-content text-sm sm:text-base text-warm-800 leading-relaxed">${renderMarkdown(data.answer)}</div>
         </div>
@@ -643,10 +1270,10 @@ async function sendStreaming(question) {
   let answerText = '';
 
   try {
-    const res = await fetch(`${API}/api/chat`, {
+    const res = await authFetch(`${API}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, stream: true }),
+      body: JSON.stringify({ question, stream: true, session_id: state.sessionId, user_id: state.userId }),
     });
 
     if (!res.ok) {
@@ -672,21 +1299,80 @@ async function sendStreaming(question) {
         try {
           const event = JSON.parse(line.slice(6));
           switch (event.type) {
-            case 'analysis': {
-              const s = STRATEGY_LABELS[event.data.recommended_strategy] || STRATEGY_LABELS.hybrid_traditional;
+            case 'intent': {
+              // 意图识别完成，徽标常驻（流式输出过程中不变化）
+              const label = event.data?.label;
               headerEl.innerHTML = `
-                <span class="text-xs px-2 py-0.5 rounded-full font-medium ${s.color}">${s.label}</span>
-                <span class="text-xs text-warm-800/40">复杂度 ${event.data.query_complexity?.toFixed(2)}</span>`;
+                ${renderHeaderBadge(label, null, null)}
+                <span id="ai-status-pill" class="hidden"></span>`;
+              break;
+            }
+            case 'analysis': {
+              // 仅在还没收到 intent 时才用 analysis 兜底
+              const hasIntentBadge = headerEl.querySelector('.rounded-full');
+              if (!hasIntentBadge) {
+                headerEl.innerHTML = renderHeaderBadge(null, event.data.recommended_strategy, event.data.query_complexity) +
+                  '<span id="ai-status-pill" class="hidden"></span>';
+              }
+              break;
+            }
+            case 'status': {
+              // ReAct Agent 内部状态：__thinking__ / __tool__:name
+              // 只更新"状态药丸"，绝不重写意图徽标
+              // 三类意图的状态统一抽象为「正在检索」「正在生成」，不暴露具体工具名
+              const c = String(event.content || '');
+              let pill = $('ai-status-pill');
+              if (!pill) {
+                // 只创建 pill，不动徽标（用户已经看到正确的意图标签）
+                headerEl.insertAdjacentHTML('beforeend', '<span id="ai-status-pill" class="hidden"></span>');
+                pill = $('ai-status-pill');
+              }
+              if (c === '__thinking__' || c.startsWith('__tool__:')) {
+                // agent 内部状态统一显示「正在检索…」（不暴露工具名）
+                pill.className = 'text-xs px-2 py-0.5 rounded-full font-medium bg-warm-100 text-warm-600 ml-1';
+                pill.textContent = '正在检索…';
+              } else if (c.startsWith('__cache_hit__')) {
+                // 命中缓存：显示「正在检索…」即可，不强调"命中"以保持状态简洁
+                pill.className = 'text-xs px-2 py-0.5 rounded-full font-medium bg-warm-100 text-warm-600 ml-1';
+                pill.textContent = '正在检索…';
+              }
               break;
             }
             case 'chunk':
+              // 首个 chunk 到来时，把状态药丸切换为「正在生成…」（保留意图徽标）
+              const chunkPill = $('ai-status-pill');
+              if (chunkPill) {
+                chunkPill.className = 'text-xs px-2 py-0.5 rounded-full font-medium bg-warm-100 text-warm-600 ml-1';
+                chunkPill.textContent = '正在生成…';
+              }
               answerText += event.content;
               bodyEl.innerHTML = renderMarkdown(answerText);
               scrollToBottom();
               break;
             case 'done': {
               bodyEl.classList.remove('streaming-cursor');
-              headerEl.innerHTML = (headerEl.innerHTML || '') + ` <span class="text-xs text-warm-800/40">${event.response_time_ms?.toFixed(0) || '--'}ms</span>`;
+              // 完成时清除状态药丸，仅保留意图徽标
+              const donePill = $('ai-status-pill');
+              if (donePill) {
+                donePill.textContent = '';
+                donePill.className = 'hidden';
+              }
+              // 阶段耗时明细（折叠面板，不影响徽标）
+              if (event.stages && Object.keys(event.stages).length > 0) {
+                const stageText = Object.entries(event.stages)
+                  .map(([k, v]) => `${k}=${(+v).toFixed(0)}ms`)
+                  .join('  ');
+                // 用 <details> 可折叠的细节面板
+                const existing = document.getElementById(`${msgId}-stages`);
+                if (existing) existing.remove();
+                const detail = document.createElement('details');
+                detail.id = `${msgId}-stages`;
+                detail.className = 'mt-2 text-xs text-warm-800/50';
+                detail.innerHTML = `
+                  <summary class="cursor-pointer hover:text-warm-800/80 select-none">⏱ 阶段耗时详情</summary>
+                  <div class="mt-1 ml-2 font-mono leading-relaxed">${escapeHtml(stageText)}</div>`;
+                bodyEl.parentElement.appendChild(detail);
+              }
               break;
             }
             case 'error':
@@ -709,6 +1395,7 @@ async function sendStreaming(question) {
     }
     bodyEl.classList.remove('streaming-cursor');
   }
+  fetchUserProfile();
 }
 
 // ═══════════════ Preset questions ═══════════════
@@ -737,7 +1424,7 @@ async function handleFileSelect(event) {
   formData.append('file', file);
 
   try {
-    const res = await fetch(`${API}/api/upload`, {
+    const res = await authFetch(`${API}/api/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -812,7 +1499,7 @@ async function processUploadedFiles() {
   text.textContent = '准备中…';
 
   try {
-    const res = await fetch(`${API}/api/recipes/process`, {
+    const res = await authFetch(`${API}/api/recipes/process`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filenames: state.uploadedFiles, skip_existing: false }),
@@ -833,7 +1520,7 @@ async function processUploadedFiles() {
 
     const pollInterval = setInterval(async () => {
       try {
-        const sr = await fetch(`${API}/api/recipes/process/status`);
+        const sr = await authFetch(`${API}/api/recipes/process/status`);
         const sd = await sr.json();
         bar.style.width = `${sd.progress_pct}%`;
 
@@ -909,7 +1596,7 @@ async function handleRebuild() {
   btn.disabled = true;
 
   try {
-    const res = await fetch(`${API}/api/rebuild`, { method: 'POST' });
+    const res = await authFetch(`${API}/api/rebuild`, { method: 'POST' });
     const data = await res.json();
     if (res.ok) {
       showToast('知识库重建成功', 'success');
@@ -926,6 +1613,11 @@ async function handleRebuild() {
 }
 
 // ═══════════════ Init ═══════════════
+// 顶栏显示当前用户名
+if (state.username) {
+  const el = $('nav-username');
+  if (el) el.textContent = state.username;
+}
 checkHealth();
 setInterval(checkHealth, 30000);   // 每 30 秒健康检查
 setInterval(fetchStats, 15000);     // 每 15 秒刷新统计

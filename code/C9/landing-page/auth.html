@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What2Eat - 登录 / 注册</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+        mono: ['SF Mono', 'JetBrains Mono', 'Consolas', 'monospace'],
+      },
+      colors: {
+        brand: {
+          50: '#FFF5F0', 100: '#FFE8DD', 200: '#FFCFB8', 300: '#FFB08A',
+          400: '#FC8F5C', 500: '#E85D3A', 600: '#D14525', 700: '#B33518',
+          800: '#8F2713', 900: '#6B1F12',
+        },
+        gold: { 400: '#F4C56A', 500: '#E8A838', 600: '#D4911E' },
+        warm: {
+          50: '#FFFDF9', 100: '#FFF9ED', 200: '#FFF3D6',
+          800: '#3D2E1A', 900: '#2B1F0F',
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+  html, body { height: 100vh; }
+  body {
+    font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .bg-mesh {
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(232,93,58,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 20%, rgba(232,168,56,0.12) 0%, transparent 55%),
+      linear-gradient(180deg, #FFFDF9 0%, #FFF9ED 40%, #FFF3D6 100%);
+  }
+  .glass {
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 0 4px 24px rgba(180,100,60,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .glass-strong {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: 0 8px 40px rgba(180,100,60,0.10), 0 2px 6px rgba(0,0,0,0.05);
+  }
+  *:focus-visible { outline: 2px solid #E85D3A; outline-offset: 2px; border-radius: 4px; }
+  @keyframes slide-in { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .toast-enter { animation: slide-in 0.3s ease-out; }
+  .tab-active {
+    background: linear-gradient(135deg, #E85D3A 0%, #D14525 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(232,93,58,0.25);
+  }
+  .tab-inactive {
+    background: rgba(255,255,255,0.4);
+    color: rgba(61,46,26,0.6);
+  }
+  .tab-inactive:hover { background: rgba(255,255,255,0.65); }
+</style>
+</head>
+<body class="min-h-screen text-warm-900 bg-mesh relative flex items-center justify-center px-4">
+
+<div class="w-full max-w-md">
+
+  <!-- Logo / Title -->
+  <div class="flex flex-col items-center mb-6">
+    <div class="text-5xl mb-2">🥢</div>
+    <h1 class="text-2xl font-semibold text-warm-900">What2Eat <span class="text-brand-500 font-light">尝咸淡</span></h1>
+    <p class="text-sm text-warm-800/60 mt-1">基于知识图谱的智能烹饪助手</p>
+  </div>
+
+  <!-- Card -->
+  <div class="glass-strong rounded-2xl p-6 sm:p-8">
+
+    <!-- Tab switcher -->
+    <div class="flex gap-2 p-1 rounded-xl bg-warm-100/60 mb-6">
+      <button id="tab-login" onclick="switchTab('login')"
+        class="flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer tab-active">
+        登录
+      </button>
+      <button id="tab-register" onclick="switchTab('register')"
+        class="flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer tab-inactive">
+        注册
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form id="auth-form" onsubmit="handleSubmit(event)" class="space-y-4">
+
+      <div>
+        <label class="block text-sm font-medium text-warm-800/80 mb-1.5">
+          用户名
+          <span id="username-hint" class="text-xs text-warm-800/40 font-normal ml-1">(3-32 字符)</span>
+        </label>
+        <input id="username" type="text" autocomplete="username" required minlength="3" maxlength="32"
+          placeholder="请输入用户名"
+          class="w-full bg-white/70 rounded-xl border border-warm-800/10 outline-none text-sm sm:text-base text-warm-900 placeholder-warm-800/40 py-2.5 px-3 focus:border-brand-400/50 focus:bg-white/90 transition-colors" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-warm-800/80 mb-1.5">
+          密码
+          <span id="password-hint" class="text-xs text-warm-800/40 font-normal ml-1">(6-64 字符)</span>
+        </label>
+        <input id="password" type="password" autocomplete="current-password" required minlength="6" maxlength="64"
+          placeholder="请输入密码"
+          class="w-full bg-white/70 rounded-xl border border-warm-800/10 outline-none text-sm sm:text-base text-warm-900 placeholder-warm-800/40 py-2.5 px-3 focus:border-brand-400/50 focus:bg-white/90 transition-colors" />
+      </div>
+
+      <button id="submit-btn" type="submit"
+        class="w-full py-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-600 active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-md shadow-brand-500/25 hover:shadow-lg hover:shadow-brand-500/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+        <span id="submit-text">登录</span>
+        <svg id="submit-spinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+      </button>
+
+    </form>
+
+    <p class="text-xs text-warm-800/40 text-center mt-4">
+      登录后会保留用户偏好与历史对话；关闭页面后本次会话自动结束。
+    </p>
+
+  </div>
+
+  <p class="text-xs text-warm-800/40 text-center mt-4">
+    <a href="index.html" class="hover:text-brand-500 transition-colors">← 返回首页</a>
+  </p>
+</div>
+
+<!-- Toast -->
+<div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 pointer-events-none"></div>
+
+<script>
+// ═══════ State ═══════
+const API = 'http://localhost:8000';
+let mode = 'login'; // 'login' | 'register'
+
+function $(id) { return document.getElementById(id); }
+
+function showToast(msg, type = 'info') {
+  const colors = { info: 'bg-warm-800/80 text-white', error: 'bg-red-500 text-white', success: 'bg-emerald-500 text-white' };
+  const el = document.createElement('div');
+  el.className = `toast-enter pointer-events-auto px-4 py-2 rounded-xl text-sm font-medium ${colors[type] || colors.info}`;
+  el.textContent = msg;
+  $('toast-container').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; }, 4000);
+  setTimeout(() => el.remove(), 4400);
+}
+
+function switchTab(next) {
+  mode = next;
+  const loginTab = $('tab-login');
+  const regTab = $('tab-register');
+  const submitText = $('submit-text');
+  const passwordInput = $('password');
+
+  if (next === 'login') {
+    loginTab.className = loginTab.className.replace('tab-inactive', 'tab-active');
+    regTab.className = regTab.className.replace('tab-active', 'tab-inactive');
+    submitText.textContent = '登录';
+    passwordInput.setAttribute('autocomplete', 'current-password');
+  } else {
+    regTab.className = regTab.className.replace('tab-inactive', 'tab-active');
+    loginTab.className = loginTab.className.replace('tab-active', 'tab-inactive');
+    submitText.textContent = '注册';
+    passwordInput.setAttribute('autocomplete', 'new-password');
+  }
+}
+
+function setLoading(loading) {
+  $('submit-btn').disabled = loading;
+  $('submit-spinner').classList.toggle('hidden', !loading);
+  $('username').disabled = loading;
+  $('password').disabled = loading;
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  const username = $('username').value.trim();
+  const password = $('password').value;
+  if (!username || !password) return;
+
+  const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+
+  setLoading(true);
+  try {
+    const res = await fetch(`${API}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = (data && data.detail && data.detail.message) || (mode === 'login' ? '登录失败' : '注册失败');
+      showToast(msg, 'error');
+      return;
+    }
+    // 保存 token 和 user_id
+    localStorage.setItem('c9_token', data.token);
+    localStorage.setItem('c9_user_id', data.user_id);
+    localStorage.setItem('c9_username', data.username || username);
+    showToast((mode === 'login' ? '登录成功' : '注册成功') + '，正在跳转...', 'success');
+    setTimeout(() => { window.location.href = 'app.html'; }, 600);
+  } catch (err) {
+    showToast('网络错误，请检查后端服务是否运行', 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// 已登录则直接跳到聊天页
+(async function init() {
+  const token = localStorage.getItem('c9_token');
+  if (!token) return;
+  try {
+    const res = await fetch(`${API}/api/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (res.ok) {
+      window.location.href = 'app.html';
+    } else {
+      // token 失效，清掉
+      localStorage.removeItem('c9_token');
+      localStorage.removeItem('c9_user_id');
+      localStorage.removeItem('c9_username');
+    }
+  } catch {
+    // 后端不可达时留在登录页
+  }
+})();
+</script>
+
+</body>
+</html>
