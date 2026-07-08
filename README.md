@@ -6,6 +6,10 @@
 
 
 
+## 🎬 Demo
+
+<video src="docs/demo/what2eat-demo.mp4" controls width="100%"></video>
+
 ---
 
 ## ✨ 核心特性
