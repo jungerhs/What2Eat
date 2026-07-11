@@ -10,7 +10,7 @@ import json
 import io
 import asyncio
 import logging
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 
 # ── 修复 Windows GBK 编码问题 ──
@@ -26,12 +26,14 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import DEFAULT_CONFIG
 from main import AdvancedGraphRAGSystem
+from storage.auth_store import get_store, init_db, AuthStore
 
 load_dotenv()
 
@@ -149,6 +151,161 @@ class ErrorResponse(BaseModel):
 
 
 # ═══════════════════════════════════════════
+# Auth & Admin Pydantic Models
+# ═══════════════════════════════════════════
+
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=32)
+    password: str = Field(..., min_length=6, max_length=64)
+
+
+class RegisterRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=32)
+    password: str = Field(..., min_length=6, max_length=64)
+
+
+class AuthResponse(BaseModel):
+    token: str
+    user: "UserResponse"
+
+
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    role: str
+    is_active: bool
+    created_at: str
+    last_login_at: Optional[str] = None
+
+
+class UserCreateRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=32)
+    password: str = Field(..., min_length=6, max_length=64)
+    role: str = Field(default="user", pattern="^(user|admin)$")
+    is_active: bool = True
+
+
+class UserUpdateRequest(BaseModel):
+    username: Optional[str] = Field(default=None, min_length=3, max_length=32)
+    password: Optional[str] = Field(default=None, min_length=6, max_length=64)
+    role: Optional[str] = Field(default=None, pattern="^(user|admin)$")
+    is_active: Optional[bool] = None
+
+
+class RoleUpdateRequest(BaseModel):
+    role: str = Field(..., pattern="^(user|admin)$")
+
+
+class StatusUpdateRequest(BaseModel):
+    is_active: bool
+
+
+class RetrieveRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000, description="要测试检索的查询")
+    top_k: Optional[int] = Field(default=None, ge=1, le=50, description="覆盖默认 top_k")
+
+
+class RetrieveDocItem(BaseModel):
+    index: int
+    content: str
+    score: float
+    recipe_name: str = ""
+    node_type: str = ""
+    node_id: str = ""
+    category: str = ""
+    cuisine_type: str = ""
+    search_method: str = ""
+    search_type: str = ""
+    source: str = ""
+    metadata: Dict[str, Any] = {}
+
+
+class RetrieveAnalysisItem(BaseModel):
+    query_complexity: float
+    relationship_intensity: float
+    reasoning_required: bool
+    entity_count: int
+    recommended_strategy: str
+    confidence: float
+    reasoning: str
+
+
+class RetrieveResponse(BaseModel):
+    question: str
+    analysis: Optional[RetrieveAnalysisItem] = None
+    docs: List[RetrieveDocItem]
+    total: int
+    elapsed_ms: float
+    error: Optional[str] = None
+
+
+class UserListResponse(BaseModel):
+    total: int
+    users: List[UserResponse]
+    stats: "UserStatsResponse"
+
+
+class UserStatsResponse(BaseModel):
+    total: int = 0
+    admins: int = 0
+    active: int = 0
+    disabled: int = 0
+
+
+# 前向引用解析
+AuthResponse.model_rebuild()
+UserListResponse.model_rebuild()
+
+
+# ═══════════════════════════════════════════
+# Auth Dependencies
+# ═══════════════════════════════════════════
+
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+) -> Dict[str, Any]:
+    """从 Bearer token 解出当前用户。失败抛 401。"""
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "unauthorized", "message": "缺少 Authorization 头"},
+        )
+    payload = AuthStore.decode_token(credentials.credentials)
+    if payload is None:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "invalid_token", "message": "Token 无效或已过期，请重新登录"},
+        )
+    # 二次校验：用户是否仍存在且未禁用
+    store = get_store()
+    user = store.get_user(payload.get("sub", ""))
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "user_not_found", "message": "用户不存在"},
+        )
+    if not user["is_active"]:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "user_disabled", "message": "账号已被禁用，请联系管理员"},
+        )
+    return user
+
+
+def _require_admin(current_user: Dict[str, Any] = Depends(_get_current_user)) -> Dict[str, Any]:
+    """要求当前用户 role=admin。"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "forbidden", "message": "需要管理员权限"},
+        )
+    return current_user
+
+
+# ═══════════════════════════════════════════
 # System State
 # ═══════════════════════════════════════════
 
@@ -188,6 +345,13 @@ def _make_analysis_response(analysis) -> QueryAnalysisResponse:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global rag_system
+    # 初始化用户认证数据库（独立于 RAG 系统，即使 RAG 失败也能登录管理）
+    try:
+        init_db()
+        logger.info("用户认证数据库初始化完成 ✅")
+    except Exception as e:
+        logger.error(f"用户认证数据库初始化失败: {e}")
+
     logger.info("正在启动 C9 系统...")
     try:
         rag_system = AdvancedGraphRAGSystem()
@@ -225,6 +389,38 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ═══════════════════════════════════════════
+# Frontend SPA (Vue 3 / Vite)
+# 静态目录：frontend/dist/（由 `npm run build` 产出）。
+# 任意未匹配的 GET 请求都 fallback 到 dist/index.html（history 路由需要）。
+# ═══════════════════════════════════════════
+
+_SPA_DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "dist")
+
+
+@app.get("/", include_in_schema=False)
+async def _spa_root():
+    index = os.path.join(_SPA_DIST, "index.html")
+    if os.path.exists(index):
+        return FileResponse(index)
+    raise HTTPException(status_code=404, detail="前端未构建，请先 cd landing-page && npm install && npm run build")
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def _spa_fallback(full_path: str):
+    # /api/* 由后续路由处理；其余路径走 SPA fallback
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail=f"API 路径不存在: {full_path}")
+    # 优先尝试静态资源
+    asset = os.path.join(_SPA_DIST, full_path)
+    if os.path.isfile(asset):
+        return FileResponse(asset)
+    index = os.path.join(_SPA_DIST, "index.html")
+    if os.path.exists(index):
+        return FileResponse(index)
+    raise HTTPException(status_code=404, detail="前端未构建，请先 cd landing-page && npm install && npm run build")
 
 
 def _check_system_ready():
@@ -730,6 +926,294 @@ async def process_uploaded_recipes(request: RecipeProcessRequest):
         _process_status["stage"] = "error"
         _process_status["errors"].append({"error": str(e)})
         raise HTTPException(status_code=500, detail={"error": "process_failed", "message": str(e)})
+
+
+# ═══════════════════════════════════════════
+# Auth Endpoints（/api/auth/*）
+# ═══════════════════════════════════════════
+
+@app.post("/api/auth/register", response_model=AuthResponse)
+async def auth_register(req: RegisterRequest):
+    """注册新用户。首个注册用户若已存在 admin 则新建为普通 user。"""
+    store = get_store()
+    try:
+        user = store.create_user(
+            username=req.username,
+            password=req.password,
+            role="user",
+            is_active=True,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"error": "invalid_input", "message": str(e)})
+
+    token = AuthStore.make_token(user)
+    return AuthResponse(token=token, user=UserResponse(**user))
+
+
+@app.post("/api/auth/login", response_model=AuthResponse)
+async def auth_login(req: LoginRequest):
+    """用户登录，返回 JWT。"""
+    store = get_store()
+    user = store.authenticate(req.username, req.password)
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "invalid_credentials", "message": "用户名或密码错误，或账号已被禁用"},
+        )
+    token = AuthStore.make_token(user)
+    return AuthResponse(token=token, user=UserResponse(**user))
+
+
+@app.get("/api/auth/me", response_model=UserResponse)
+async def auth_me(current_user: Dict[str, Any] = Depends(_get_current_user)):
+    """返回当前登录用户信息。"""
+    return UserResponse(**current_user)
+
+
+# ═══════════════════════════════════════════
+# Admin Endpoints（/api/admin/users/*，需 admin 角色）
+# ═══════════════════════════════════════════
+
+def _build_stats(users: List[Dict[str, Any]]) -> UserStatsResponse:
+    return UserStatsResponse(
+        total=len(users),
+        admins=sum(1 for u in users if u["role"] == "admin"),
+        active=sum(1 for u in users if u["is_active"]),
+        disabled=sum(1 for u in users if not u["is_active"]),
+    )
+
+
+@app.get("/api/admin/users", response_model=UserListResponse)
+async def admin_list_users(_: Dict[str, Any] = Depends(_require_admin)):
+    """列出所有用户（仅 admin）。"""
+    store = get_store()
+    users = store.list_users()
+    return UserListResponse(
+        total=len(users),
+        users=[UserResponse(**u) for u in users],
+        stats=_build_stats(users),
+    )
+
+
+@app.post("/api/admin/users", response_model=UserResponse, status_code=201)
+async def admin_create_user(
+    req: UserCreateRequest,
+    _: Dict[str, Any] = Depends(_require_admin),
+):
+    """管理员创建用户（可指定 role=admin）。"""
+    store = get_store()
+    try:
+        user = store.create_user(
+            username=req.username,
+            password=req.password,
+            role=req.role,
+            is_active=req.is_active,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"error": "invalid_input", "message": str(e)})
+    return UserResponse(**user)
+
+
+@app.put("/api/admin/users/{user_id}", response_model=UserResponse)
+async def admin_update_user(
+    user_id: str,
+    req: UserUpdateRequest,
+    current_user: Dict[str, Any] = Depends(_require_admin),
+):
+    """管理员更新用户（用户名/密码/角色/状态）。"""
+    store = get_store()
+    target = store.get_user(user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail={"error": "not_found", "message": "用户不存在"})
+
+    # 防止管理员把自己降级或禁用自己（避免锁死）
+    if target["id"] == current_user["id"]:
+        if req.role is not None and req.role != "admin":
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "self_demotion", "message": "不能降级自己的管理员角色"},
+            )
+        if req.is_active is False:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "self_disable", "message": "不能禁用自己的账号"},
+            )
+
+    try:
+        updated = store.update_user(
+            user_id,
+            username=req.username,
+            password=req.password,
+            role=req.role,
+            is_active=req.is_active,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"error": "invalid_input", "message": str(e)})
+
+    if updated is None:
+        raise HTTPException(status_code=404, detail={"error": "not_found", "message": "用户不存在"})
+    return UserResponse(**updated)
+
+
+@app.patch("/api/admin/users/{user_id}/role", response_model=UserResponse)
+async def admin_update_role(
+    user_id: str,
+    req: RoleUpdateRequest,
+    current_user: Dict[str, Any] = Depends(_require_admin),
+):
+    """单独修改用户角色。"""
+    store = get_store()
+    target = store.get_user(user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail={"error": "not_found", "message": "用户不存在"})
+    if target["id"] == current_user["id"] and req.role != "admin":
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "self_demotion", "message": "不能降级自己的管理员角色"},
+        )
+    try:
+        updated = store.update_user(user_id, role=req.role)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"error": "invalid_input", "message": str(e)})
+    if updated is None:
+        raise HTTPException(status_code=404, detail={"error": "not_found", "message": "用户不存在"})
+    return UserResponse(**updated)
+
+
+@app.patch("/api/admin/users/{user_id}/status", response_model=UserResponse)
+async def admin_update_status(
+    user_id: str,
+    req: StatusUpdateRequest,
+    current_user: Dict[str, Any] = Depends(_require_admin),
+):
+    """单独启用/禁用用户。"""
+    store = get_store()
+    target = store.get_user(user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail={"error": "not_found", "message": "用户不存在"})
+    if target["id"] == current_user["id"] and req.is_active is False:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "self_disable", "message": "不能禁用自己的账号"},
+        )
+    updated = store.update_user(user_id, is_active=req.is_active)
+    if updated is None:
+        raise HTTPException(status_code=404, detail={"error": "not_found", "message": "用户不存在"})
+    return UserResponse(**updated)
+
+
+@app.delete("/api/admin/users/{user_id}", status_code=204)
+async def admin_delete_user(
+    user_id: str,
+    current_user: Dict[str, Any] = Depends(_require_admin),
+):
+    """删除用户。不能删除自己。"""
+    store = get_store()
+    target = store.get_user(user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail={"error": "not_found", "message": "用户不存在"})
+    if target["id"] == current_user["id"]:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "self_delete", "message": "不能删除自己的账号"},
+        )
+    store.delete_user(user_id)
+    return None
+
+
+# ═══════════════════════════════════════════
+# Retrieve Test Endpoint（/api/admin/retrieve，仅 admin，跳过 LLM 生成）
+# ═══════════════════════════════════════════
+
+def _doc_to_item(idx: int, doc: Any) -> RetrieveDocItem:
+    """把 langchain Document（或 dict-like）转成 RetrieveDocItem。"""
+    content = getattr(doc, "page_content", None)
+    if content is None and isinstance(doc, dict):
+        content = doc.get("content") or doc.get("page_content") or ""
+    content = str(content or "")
+
+    metadata = getattr(doc, "metadata", None)
+    if metadata is None and isinstance(doc, dict):
+        metadata = doc.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    def _get(*keys, default=""):
+        for k in keys:
+            v = metadata.get(k)
+            if v not in (None, "", []):
+                return v
+        return default
+
+    score = float(_get("final_score", "relevance_score", "score", default=0.0))
+
+    return RetrieveDocItem(
+        index=idx,
+        content=content,
+        score=score,
+        recipe_name=str(_get("recipe_name", "name", "entity_name")),
+        node_type=str(_get("node_type", "type")),
+        node_id=str(_get("node_id", "id", "chunk_id")),
+        category=str(_get("category")),
+        cuisine_type=str(_get("cuisine_type")),
+        search_method=str(_get("search_method", "method")),
+        search_type=str(_get("search_type", "route_strategy", "strategy")),
+        source=str(_get("source")),
+        metadata=metadata,
+    )
+
+
+@app.post("/api/admin/retrieve", response_model=RetrieveResponse)
+async def admin_retrieve(
+    req: RetrieveRequest,
+    _: Dict[str, Any] = Depends(_require_admin),
+):
+    """检索测试：执行 query_router.route_query，返回 analysis + docs，不经过 LLM 生成。"""
+    if rag_system is None or not rag_system.system_ready:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "system_not_ready", "message": "RAG 系统未就绪，请稍后再试"},
+        )
+
+    start = time.time()
+    try:
+        top_k = req.top_k if req.top_k else rag_system.config.top_k
+        relevant_docs, analysis = rag_system.query_router.route_query(req.question, top_k)
+    except Exception as e:
+        logger.error(f"检索测试失败: {e}", exc_info=True)
+        return RetrieveResponse(
+            question=req.question,
+            analysis=None,
+            docs=[],
+            total=0,
+            elapsed_ms=round((time.time() - start) * 1000, 1),
+            error=str(e),
+        )
+
+    docs = [_doc_to_item(i, d) for i, d in enumerate(relevant_docs or [])]
+
+    analysis_item: Optional[RetrieveAnalysisItem] = None
+    if analysis is not None:
+        strategy = analysis.recommended_strategy
+        strategy_str = strategy.value if hasattr(strategy, "value") else str(strategy)
+        analysis_item = RetrieveAnalysisItem(
+            query_complexity=analysis.query_complexity,
+            relationship_intensity=analysis.relationship_intensity,
+            reasoning_required=analysis.reasoning_required,
+            entity_count=analysis.entity_count,
+            recommended_strategy=strategy_str,
+            confidence=analysis.confidence,
+            reasoning=analysis.reasoning or "",
+        )
+
+    return RetrieveResponse(
+        question=req.question,
+        analysis=analysis_item,
+        docs=docs,
+        total=len(docs),
+        elapsed_ms=round((time.time() - start) * 1000, 1),
+        error=None,
+    )
 
 
 # ═══════════════════════════════════════════

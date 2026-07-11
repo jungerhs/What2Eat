@@ -51,3 +51,13 @@ code/classfier/models/
 code/classfier/reports/
 code/classfier/logs/
 code/classfier/experiments/
+
+# Frontend / Vue 临时备份（重构前后一次性产物，可清理）
+code/C9/landing-page.backup-*/
+code/C9/landing-page-legacy/
+code/C9/js-backup/
+data/HowToCook-master/
+
+# IDE / agent scratch
+.understand-anything/
+.cursor/
